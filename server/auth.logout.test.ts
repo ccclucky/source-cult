@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { appRouter } from "./routers";
 import { COOKIE_NAME } from "../shared/const";
 import type { TrpcContext } from "./_core/context";
+import { invokeLLM } from "./_core/llm";
 
 type CookieCall = {
   name: string;
@@ -40,6 +41,22 @@ function createAuthContext(): { ctx: TrpcContext; clearedCookies: CookieCall[] }
 
   return { ctx, clearedCookies };
 }
+
+describe("secrets validation", () => {
+  it("validates Google API Key by calling LLM", async () => {
+    // Test if Google API Key is properly configured
+    const response = await invokeLLM({
+      messages: [
+        { role: "system", content: "You are a helpful assistant." },
+        { role: "user", content: "Say 'API Key is valid' if you receive this message." },
+      ],
+    });
+
+    expect(response).toBeDefined();
+    expect(response.choices).toBeDefined();
+    expect(response.choices.length).toBeGreaterThan(0);
+  });
+});
 
 describe("auth.logout", () => {
   it("clears the session cookie and reports success", async () => {
