@@ -105,6 +105,23 @@ temp/
 *.db
 *.sqlite
 *.sqlite3
+data/
+*.db-journal
+
+# Test data
+test_cost_data/
+test_cost_control.db
+
+# Contracts build artifacts
+contracts/out/
+contracts/cache/
 
 # Webdev artifacts (checkpoint zips, migrations, etc.)
 .webdev/
+
+# Screenshots and logs
+screenshots/
+.manus-logs/
+
+# Node modules cache
+.node_modules.cache/
