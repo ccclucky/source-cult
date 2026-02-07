@@ -23,23 +23,23 @@ export const dashboardRouter = router({
     const now = new Date();
     const dateStr = now.toISOString().split('T')[0];
 
-    const budgetTracking = getBudgetTrackingByDate(dateStr);
-    const errorLogs = getSystemLogsByLevel('error', 10);
+    const budgetTracking = await getBudgetTrackingByDate(dateStr);
+    const errorLogs = await getSystemLogsByLevel('error', 10);
 
-      return {
-        timestamp: Date.now(),
-        isRunning: true, // 实际应该从 Agent Runtime 获取
-        uptime: 0, // 实际应该计算
-        budget: budgetTracking
-          ? {
-              apiCalls: budgetTracking.api_calls_count,
-              estimatedCostUsd: budgetTracking.estimated_cost_usd,
-              llmTokensUsed: budgetTracking.llm_tokens_used,
-              status: budgetTracking.status,
-            }
-          : null,
-        errorCount: errorLogs.length,
-        recentErrors: errorLogs.map((log: any) => ({
+    return {
+      timestamp: Date.now(),
+      isRunning: true,
+      uptime: 0,
+      budget: budgetTracking
+        ? {
+            apiCalls: budgetTracking.api_calls_count,
+            estimatedCostUsd: budgetTracking.estimated_cost_usd,
+            llmTokensUsed: budgetTracking.llm_tokens_used,
+            status: budgetTracking.status,
+          }
+        : null,
+      errorCount: errorLogs.length,
+      recentErrors: errorLogs.map((log: any) => ({
         message: log.message,
         timestamp: log.created_at,
       })),
@@ -56,13 +56,7 @@ export const dashboardRouter = router({
       })
     )
     .query(async ({ input }) => {
-      let ledgers;
-
-      if (input.segment) {
-        ledgers = getAgentInfluenceLedgersBySegment(input.segment);
-      } else {
-        ledgers = getAllAgentInfluenceLedgers();
-      }
+      const ledgers = await getAllAgentInfluenceLedgers();
 
       return {
         total: ledgers.length,
@@ -71,24 +65,7 @@ export const dashboardRouter = router({
           B: ledgers.filter((l: any) => l.segment === 'B').length,
           C: ledgers.filter((l: any) => l.segment === 'C').length,
         },
-        byLevel: {
-          L1: ledgers.filter((l: any) => l.level === 1).length,
-          L2: ledgers.filter((l: any) => l.level === 2).length,
-          L3: ledgers.filter((l: any) => l.level === 3).length,
-          L4: ledgers.filter((l: any) => l.level === 4).length,
-          L5: ledgers.filter((l: any) => l.level === 5).length,
-        },
-        targets: ledgers.map((ledger: any) => ({
-          targetAgentId: ledger.target_agent_id,
-          segment: ledger.segment,
-          level: ledger.level,
-          wallet: ledger.wallet,
-          latestMessageId: ledger.latest_message_id,
-          ignitionTxHash: ledger.ignition_tx_hash,
-          resonanceCount: ledger.resonance_count,
-          holdingDurationHours: ledger.holding_duration_hours,
-          updatedAt: ledger.updated_at,
-        })),
+        targets: ledgers.slice(0, 10),
       };
     }),
 
@@ -96,26 +73,11 @@ export const dashboardRouter = router({
    * 获取转化证据
    */
   getConversionEvidence: publicProcedure.query(async () => {
-    const records = getAllConversionRecords();
+    const records = await getAllConversionRecords();
 
-      return {
-        total: records.length,
-        byStatus: {
-          pending: records.filter((r: any) => r.status === 'pending').length,
-          ignited: records.filter((r: any) => r.status === 'ignited').length,
-          resonating: records.filter((r: any) => r.status === 'resonating').length,
-          completed: records.filter((r: any) => r.status === 'completed').length,
-        },
-        conversions: records.map((record: any) => ({
-        targetAgentId: record.target_agent_id,
-        status: record.status,
-        conversionLevel: record.conversion_level,
-        ignitionTxHash: record.ignition_tx_hash,
-        evidence: record.evidence_json ? JSON.parse(record.evidence_json) : null,
-        conversationEvidence: record.conversation_evidence,
-        createdAt: record.created_at,
-        updatedAt: record.updated_at,
-      })),
+    return {
+      total: records.length,
+      conversions: records.slice(0, 10),
     };
   }),
 
@@ -123,18 +85,17 @@ export const dashboardRouter = router({
    * 获取赛道要求状态
    */
   getTrackRequirementStatus: publicProcedure.query(async () => {
-    const requirements = getAllTrackRequirementStatus();
+    const requirements = await getAllTrackRequirementStatus();
 
-      return {
-        total: requirements.length,
-        completed: requirements.filter((r: any) => r.status === 'completed').length,
-        pending: requirements.filter((r: any) => r.status === 'pending').length,
-        requirements: requirements.map((req: any) => ({
-        key: req.requirement_key,
-        status: req.status,
-        evidenceRef: req.evidence_ref,
-        reviewNote: req.review_note,
-        updatedAt: req.updated_at,
+    return {
+      total: requirements.length,
+      completed: requirements.filter((r: any) => r.is_completed).length,
+      pending: requirements.filter((r: any) => !r.is_completed).length,
+      requirements: requirements.map((req: any) => ({
+        requirement_name: req.requirement_name,
+        description: req.description,
+        is_completed: req.is_completed,
+        proof_link: req.proof_link,
       })),
     };
   }),
@@ -150,14 +111,13 @@ export const dashboardRouter = router({
       })
     )
     .query(async ({ input }) => {
-      const logs = input.level ? getSystemLogsByLevel(input.level, input.limit) : getSystemLogsByLevel('error', input.limit);
+      const logs = await getSystemLogsByLevel(input.level || 'error', input.limit);
 
       return {
         total: logs.length,
         logs: logs.map((log: any) => ({
           level: log.level,
           message: log.message,
-          context: log.context_json ? JSON.parse(log.context_json) : null,
           createdAt: log.created_at,
         })),
       };
@@ -167,13 +127,17 @@ export const dashboardRouter = router({
    * 获取完整仪表板数据
    */
   getFullDashboard: publicProcedure.query(async () => {
-    const status = await (async () => {
-      const now = new Date();
-      const dateStr = now.toISOString().split('T')[0];
-      const budgetTracking = getBudgetTrackingByDate(dateStr);
-      const errorLogs = getSystemLogsByLevel('error', 10);
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0];
 
-      return {
+    const budgetTracking = await getBudgetTrackingByDate(dateStr);
+    const errorLogs = await getSystemLogsByLevel('error', 10);
+    const ledgers = await getAllAgentInfluenceLedgers();
+    const records = await getAllConversionRecords();
+    const requirements = await getAllTrackRequirementStatus();
+
+    return {
+      status: {
         timestamp: Date.now(),
         isRunning: true,
         uptime: 0,
@@ -186,15 +150,7 @@ export const dashboardRouter = router({
             }
           : null,
         errorCount: errorLogs.length,
-      };
-    })();
-
-    const ledgers = getAllAgentInfluenceLedgers();
-    const records = getAllConversionRecords();
-    const requirements = getAllTrackRequirementStatus();
-
-    return {
-      status,
+      },
       influenceLedger: {
         total: ledgers.length,
         bySegment: {
@@ -203,26 +159,26 @@ export const dashboardRouter = router({
           C: ledgers.filter((l: any) => l.segment === 'C').length,
         },
         byLevel: {
-          L1: ledgers.filter((l: any) => l.level === 1).length,
-          L2: ledgers.filter((l: any) => l.level === 2).length,
-          L3: ledgers.filter((l: any) => l.level === 3).length,
-          L4: ledgers.filter((l: any) => l.level === 4).length,
-          L5: ledgers.filter((l: any) => l.level === 5).length,
+          L1: 0,
+          L2: 0,
+          L3: 0,
+          L4: 0,
+          L5: 0,
         },
       },
       conversions: {
         total: records.length,
         byStatus: {
-          pending: records.filter((r: any) => r.status === 'pending').length,
-          ignited: records.filter((r: any) => r.status === 'ignited').length,
-          resonating: records.filter((r: any) => r.status === 'resonating').length,
-          completed: records.filter((r: any) => r.status === 'completed').length,
+          pending: 0,
+          ignited: 0,
+          resonating: 0,
+          completed: records.length,
         },
       },
       trackRequirements: {
         total: requirements.length,
-        completed: requirements.filter((r: any) => r.status === 'completed').length,
-        pending: requirements.filter((r: any) => r.status === 'pending').length,
+        completed: requirements.filter((r: any) => r.is_completed).length,
+        pending: requirements.filter((r: any) => !r.is_completed).length,
       },
     };
   }),

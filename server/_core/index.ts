@@ -7,6 +7,8 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { initializeDatabase } from "../../backend/src/database/db";
+import path from "path";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -28,6 +30,16 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
+  // Initialize database on startup
+  const dbPath = process.env.DATABASE_PATH || path.join(process.cwd(), 'data', 'source-cult.db');
+  try {
+    initializeDatabase(dbPath);
+    console.log('[Server] Database initialized successfully');
+  } catch (error) {
+    console.error('[Server] Failed to initialize database:', error);
+    // Continue anyway - database might be optional for some operations
+  }
+
   const app = express();
   const server = createServer(app);
   // Configure body parser with larger size limit for file uploads
