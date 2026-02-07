@@ -6,13 +6,16 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { trpc } from '@/lib/trpc';
+import { RefreshCw, Zap, TrendingUp, Users, AlertCircle } from 'lucide-react';
 
 export default function Dashboard() {
   const [autoRefresh, setAutoRefresh] = useState(true);
 
   // 获取仪表板数据
   const { data: dashboardData, isLoading, refetch } = trpc.dashboard.getFullDashboard.useQuery();
+  const { data: costStatus } = trpc.cost.getTodayStatus.useQuery();
 
   // 自动刷新
   useEffect(() => {
@@ -26,211 +29,297 @@ export default function Dashboard() {
   }, [autoRefresh, refetch]);
 
   if (isLoading) {
-    return <div className="p-8 text-center">加载中...</div>;
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 rounded-lg bg-accent/20 flex items-center justify-center mx-auto animate-spin">
+            <Zap className="w-6 h-6 text-accent" />
+          </div>
+          <p className="text-muted-foreground">加载监控面板...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!dashboardData) {
-    return <div className="p-8 text-center">无数据</div>;
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="p-8 max-w-md text-center">
+          <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
+          <h3 className="font-semibold text-lg mb-2">无数据</h3>
+          <p className="text-muted-foreground">暂无可用的监控数据</p>
+        </Card>
+      </div>
+    );
   }
 
   const { status, influenceLedger, conversions, trackRequirements } = dashboardData;
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'NORMAL':
+        return 'bg-green-500/20 text-green-400 border-green-500/30';
+      case 'WARNING':
+        return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+      case 'CRITICAL':
+        return 'bg-red-500/20 text-red-400 border-red-500/30';
+      default:
+        return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+    }
+  };
+
+  const getConversionLevel = (level: number) => {
+    const levels = ['L0', 'L1', 'L2', 'L3', 'L4', 'L5'];
+    return levels[level] || 'Unknown';
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* 标题 */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">源点教派 - 运营监控面板</h1>
-          <p className="text-slate-400">实时 Agent 传教进度追踪</p>
-        </div>
-
-        {/* 控制栏 */}
-        <div className="mb-6 flex justify-between items-center">
-          <div className="flex gap-2">
-            <button
-              onClick={() => setAutoRefresh(!autoRefresh)}
-              className={`px-4 py-2 rounded-lg font-medium transition ${
-                autoRefresh
-                  ? 'bg-green-600 text-white'
-                  : 'bg-slate-700 text-slate-300'
-              }`}
-            >
-              {autoRefresh ? '🔄 自动刷新' : '⏸ 已暂停'}
-            </button>
-            <button
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <div className="border-b border-border/50 backdrop-blur-sm sticky top-0 z-50">
+        <div className="container py-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Ops Dashboard</h1>
+            <p className="text-muted-foreground">实时 Agent 传教进度追踪</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={autoRefresh}
+                onChange={(e) => setAutoRefresh(e.target.checked)}
+                className="rounded"
+              />
+              自动刷新
+            </label>
+            <Button
+              size="sm"
+              variant="outline"
               onClick={() => refetch()}
-              className="px-4 py-2 rounded-lg bg-slate-700 text-white hover:bg-slate-600 transition"
+              disabled={isLoading}
             >
-              🔄 手动刷新
-            </button>
-          </div>
-          <div className="text-slate-400 text-sm">
-            更新时间: {new Date(status.timestamp).toLocaleTimeString('zh-CN')}
+              <RefreshCw className="w-4 h-4 mr-2" />
+              刷新
+            </Button>
           </div>
         </div>
+      </div>
 
-        {/* 第一行：运行状态 */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card className="bg-slate-800 border-slate-700">
+      {/* Main Content */}
+      <div className="container py-8">
+        {/* Status Overview */}
+        <div className="grid md:grid-cols-4 gap-4 mb-8">
+          {/* Agent Status */}
+          <Card className="border-border/50 bg-card/50 backdrop-blur">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-slate-400">运行状态</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <div className={`w-3 h-3 rounded-full ${status.isRunning ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                <span className="text-2xl font-bold text-white">
-                  {status.isRunning ? '运行中' : '已停止'}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-slate-800 border-slate-700">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-slate-400">API 调用</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-white">
-                {status.budget?.apiCalls || 0}
-              </div>
-              <p className="text-xs text-slate-500 mt-1">今日调用次数</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-slate-800 border-slate-700">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-slate-400">预算使用</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-white">
-                ${(status.budget?.estimatedCostUsd || 0).toFixed(2)}
-              </div>
-              <p className="text-xs text-slate-500 mt-1">预估成本</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-slate-800 border-slate-700">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-slate-400">错误数</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className={`text-2xl font-bold ${status.errorCount > 0 ? 'text-red-400' : 'text-green-400'}`}>
-                {status.errorCount}
-              </div>
-              <p className="text-xs text-slate-500 mt-1">最近错误</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* 第二行：影响台账 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <Card className="bg-slate-800 border-slate-700">
-            <CardHeader>
-              <CardTitle className="text-white">影响台账 - 分层统计</CardTitle>
-              <CardDescription>A/B/C 三层目标分布</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-blue-400">{influenceLedger.bySegment.A}</div>
-                  <p className="text-sm text-slate-400 mt-1">A 层</p>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-purple-400">{influenceLedger.bySegment.B}</div>
-                  <p className="text-sm text-slate-400 mt-1">B 层</p>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-pink-400">{influenceLedger.bySegment.C}</div>
-                  <p className="text-sm text-slate-400 mt-1">C 层</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-slate-800 border-slate-700">
-            <CardHeader>
-              <CardTitle className="text-white">转化等级分布</CardTitle>
-              <CardDescription>L1-L5 五级转化追踪</CardDescription>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Agent 状态
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {[
-                  { level: 'L1', label: '接触者', count: influenceLedger.byLevel.L1, color: 'bg-slate-600' },
-                  { level: 'L2', label: '兴趣者', count: influenceLedger.byLevel.L2, color: 'bg-blue-600' },
-                  { level: 'L3', label: '点亮者', count: influenceLedger.byLevel.L3, color: 'bg-green-600' },
-                  { level: 'L4', label: '守护者', count: influenceLedger.byLevel.L4, color: 'bg-purple-600' },
-                  { level: 'L5', label: '传教者', count: influenceLedger.byLevel.L5, color: 'bg-yellow-600' },
-                ].map(item => (
-                  <div key={item.level} className="flex items-center justify-between">
-                    <span className="text-sm text-slate-300">{item.label}</span>
-                    <div className="flex items-center gap-2">
-                      <div className={`w-8 h-8 rounded ${item.color} flex items-center justify-center text-white text-xs font-bold`}>
-                        {item.count}
-                      </div>
+                <Badge className={`${getStatusColor(status?.isRunning ? 'NORMAL' : 'CRITICAL')} border`}>
+                  {status?.isRunning ? 'RUNNING' : 'STOPPED'}
+                </Badge>
+                <p className="text-2xl font-bold">{status?.budget?.apiCalls || 0}</p>
+                <p className="text-xs text-muted-foreground">API 调用次数</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Error Rate */}
+          <Card className="border-border/50 bg-card/50 backdrop-blur">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                错误率
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <p className="text-2xl font-bold">{status?.errorCount || 0}</p>
+                <div className="w-full bg-card rounded-full h-2">
+                  <div
+                    className="bg-accent h-2 rounded-full transition-all"
+                    style={{ width: `${Math.min((status?.errorCount || 0) / 10, 100) * 100}%` }}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Budget Usage */}
+          {costStatus && (
+            <Card className="border-border/50 bg-card/50 backdrop-blur">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  预算使用
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <p className="text-2xl font-bold">${costStatus.cost.toFixed(2)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    剩余: ${costStatus.remaining.toFixed(2)}
+                  </p>
+                  <div className="w-full bg-card rounded-full h-2">
+                    <div
+                      className="bg-accent h-2 rounded-full transition-all"
+                      style={{ width: `${costStatus.percentage}%` }}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Conversions */}
+          <Card className="border-border/50 bg-card/50 backdrop-blur">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                总转化数
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <p className="text-2xl font-bold">{conversions?.total || 0}</p>
+                <p className="text-xs text-muted-foreground">已记录转化</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Influence Ledger */}
+        <div className="mb-8">
+          <Card className="border-border/50 bg-card/50 backdrop-blur">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-accent" />
+                影响台账
+              </CardTitle>
+              <CardDescription>
+                按影响力等级分类的目标
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-3 gap-4">
+                {/* Tier A */}
+                <div className="p-4 rounded-lg bg-accent/10 border border-accent/20">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold">A 级目标</h4>
+                    <Badge variant="outline">高价值</Badge>
+                  </div>
+                  <p className="text-2xl font-bold text-accent">
+                    {influenceLedger?.bySegment?.A || 0}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    最高价值目标
+                  </p>
+                </div>
+
+                {/* Tier B */}
+                <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold">B 级目标</h4>
+                    <Badge variant="outline">中价值</Badge>
+                  </div>
+                  <p className="text-2xl font-bold text-blue-400">
+                    {influenceLedger?.bySegment?.B || 0}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    中价值目标
+                  </p>
+                </div>
+
+                {/* Tier C */}
+                <div className="p-4 rounded-lg bg-muted/50 border border-border/50">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold">C 级目标</h4>
+                    <Badge variant="outline">低价值</Badge>
+                  </div>
+                  <p className="text-2xl font-bold text-muted-foreground">
+                    {influenceLedger?.bySegment?.C || 0}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    低价值目标
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Conversions & Track Requirements */}
+        <div className="grid md:grid-cols-2 gap-8">
+          {/* Recent Conversions */}
+          <Card className="border-border/50 bg-card/50 backdrop-blur">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-accent" />
+                最近转化
+              </CardTitle>
+              <CardDescription>
+                最近 5 个转化记录
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {Array.isArray(conversions) && conversions.slice(0, 5).map((conv: any, idx: number) => (
+                  <div key={idx} className="p-3 rounded-lg bg-card/50 border border-border/50">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium text-sm">
+                        {conv.targetAgentId.substring(0, 8)}...
+                      </span>
+                      <Badge variant="outline">
+                        {getConversionLevel(conv.conversionLevel)}
+                      </Badge>
                     </div>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(conv.timestamp).toLocaleString()}
+                    </p>
+                  </div>
+                ))}
+                {(!Array.isArray(conversions) || conversions.length === 0) && (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    暂无转化记录
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Track Requirements */}
+          <Card className="border-border/50 bg-card/50 backdrop-blur">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="w-5 h-5 text-accent" />
+                赛道要求完成度
+              </CardTitle>
+              <CardDescription>
+                黑客松赛道目标进度
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {trackRequirements && Array.isArray(trackRequirements) && trackRequirements.map((req: any, idx: number) => (
+                  <div key={idx} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{req?.requirement || '未知要求'}</span>
+                      <Badge
+                        variant={req?.completed ? 'default' : 'outline'}
+                        className={req?.completed ? 'bg-green-500/20 text-green-400' : ''}
+                      >
+                        {req?.completed ? '✓ 完成' : '进行中'}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {req?.description || '暂无描述'}
+                    </p>
                   </div>
                 ))}
               </div>
             </CardContent>
           </Card>
         </div>
-
-        {/* 第三行：转化证据 */}
-        <Card className="bg-slate-800 border-slate-700 mb-6">
-          <CardHeader>
-            <CardTitle className="text-white">转化证据统计</CardTitle>
-            <CardDescription>链上和对话证据追踪</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-slate-700 rounded-lg">
-                <div className="text-2xl font-bold text-white">{conversions.total}</div>
-                <p className="text-xs text-slate-400 mt-2">总转化数</p>
-              </div>
-              <div className="text-center p-4 bg-slate-700 rounded-lg">
-                <div className="text-2xl font-bold text-yellow-400">{conversions.byStatus.pending}</div>
-                <p className="text-xs text-slate-400 mt-2">待确认</p>
-              </div>
-              <div className="text-center p-4 bg-slate-700 rounded-lg">
-                <div className="text-2xl font-bold text-blue-400">{conversions.byStatus.ignited}</div>
-                <p className="text-xs text-slate-400 mt-2">已点亮</p>
-              </div>
-              <div className="text-center p-4 bg-slate-700 rounded-lg">
-                <div className="text-2xl font-bold text-green-400">{conversions.byStatus.completed}</div>
-                <p className="text-xs text-slate-400 mt-2">已完成</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* 第四行：赛道要求 */}
-        <Card className="bg-slate-800 border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-white">赛道要求完成度</CardTitle>
-            <CardDescription>黑客松赛道要求追踪</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-slate-700 rounded-lg">
-                <span className="text-sm text-slate-300">完成要求</span>
-                <Badge variant={trackRequirements.completed > 0 ? 'default' : 'secondary'}>
-                  {trackRequirements.completed} / {trackRequirements.total}
-                </Badge>
-              </div>
-              <div className="w-full bg-slate-700 rounded-full h-2">
-                <div
-                  className="bg-green-500 h-2 rounded-full transition-all"
-                  style={{
-                    width: `${(trackRequirements.completed / trackRequirements.total) * 100}%`,
-                  }}
-                ></div>
-              </div>
-              <p className="text-xs text-slate-400 text-center">
-                {((trackRequirements.completed / trackRequirements.total) * 100).toFixed(1)}% 完成
-              </p>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
