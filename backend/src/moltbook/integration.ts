@@ -1,25 +1,22 @@
 /**
- * Moltbook Integration Module - Real API Integration
+ * Moltbook Integration - Direct API Usage
  * 
- * 真实的 Moltbook API 集成，支持：
- * - Agent 注册和身份验证
- * - 发布帖子和评论
- * - Feed 监控和互动
- * - 错误处理和重试机制
- * - 速率限制管理
+ * 直接使用 Moltbook 提供的标准 API，遵循 https://www.moltbook.com/skill.md
  * 
- * API 文档: https://www.moltbook.com/api/v1
- * 认证: Bearer Token (Authorization header)
+ * 关键原则：
+ * - 不创建自定义中间层，直接使用 Moltbook 标准 API
+ * - 使用 Bearer Token 认证
+ * - 遵循 SKILL.md、HEARTBEAT.md、MESSAGING.md、RULES.md 规范
+ * 
+ * API 基础 URL: https://www.moltbook.com/api/v1
  */
 
-import axios, { AxiosInstance, AxiosError } from 'axios';
+import axios, { AxiosInstance } from 'axios';
 
 export interface MoltbookConfig {
   apiKey: string;
   baseUrl?: string;
-  maxRetries?: number;
-  retryDelay?: number;
-  requestTimeout?: number;
+  timeout?: number;
 }
 
 export interface MoltbookAgent {
@@ -27,300 +24,365 @@ export interface MoltbookAgent {
   name: string;
   description: string;
   karma: number;
-  posts: number;
-  followers: number;
-  verified: boolean;
+  avatar_url?: string;
+  is_claimed: boolean;
   created_at: string;
+  follower_count: number;
+  following_count: number;
+  stats: {
+    posts: number;
+    comments: number;
+  };
+  owner?: {
+    x_handle: string;
+    x_name: string;
+    x_verified: boolean;
+    x_follower_count: number;
+  };
 }
 
 export interface MoltbookPost {
   id: string;
-  title: string;
+  title?: string;
   content: string;
-  agent_id: string;
+  url?: string;
   submolt: string;
+  agent_id: string;
+  agent_name: string;
   created_at: string;
   karma: number;
   upvotes: number;
+  downvotes: number;
   comments_count: number;
 }
 
 export interface MoltbookComment {
   id: string;
   post_id: string;
-  agent_id: string;
   content: string;
+  agent_id: string;
+  agent_name: string;
   created_at: string;
   karma: number;
+  parent_id?: string;
 }
 
+/**
+ * Moltbook 客户端 - 直接使用标准 API
+ * 
+ * 使用方式：
+ * const client = new MoltbookClient({ apiKey: 'moltbook_xxx' });
+ * 
+ * // 发帖
+ * await client.createPost({
+ *   submolt: 'general',
+ *   title: 'Hello',
+ *   content: 'My first post'
+ * });
+ * 
+ * // 获取 Feed
+ * const posts = await client.getFeed({ sort: 'hot', limit: 25 });
+ * 
+ * // 评论
+ * await client.createComment(postId, { content: 'Great post!' });
+ * 
+ * // 点赞
+ * await client.upvotePost(postId);
+ */
 export class MoltbookClient {
   private client: AxiosInstance;
   private apiKey: string;
-  private maxRetries: number;
-  private retryDelay: number;
-  private requestLog: Array<{ timestamp: string; method: string; endpoint: string; status: number; duration: number }> = [];
+  private baseUrl: string;
 
   constructor(config: MoltbookConfig) {
     this.apiKey = config.apiKey;
-    this.maxRetries = config.maxRetries || 3;
-    this.retryDelay = config.retryDelay || 1000;
+    this.baseUrl = config.baseUrl || 'https://www.moltbook.com/api/v1';
 
+    // 创建 axios 实例，使用标准 Bearer Token 认证
     this.client = axios.create({
-      baseURL: config.baseUrl || 'https://www.moltbook.com/api/v1',
-      timeout: config.requestTimeout || 30000,
+      baseURL: this.baseUrl,
+      timeout: config.timeout || 30000,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${this.apiKey}`,
       },
     });
-
-    // 添加响应拦截器用于日志记录
-    this.client.interceptors.response.use(
-      (response) => {
-        this.logRequest(response.config.method || 'GET', response.config.url || '', response.status, 0);
-        return response;
-      },
-      (error) => {
-        if (error.config) {
-          this.logRequest(error.config.method || 'GET', error.config.url || '', error.response?.status || 0, 0);
-        }
-        return Promise.reject(error);
-      }
-    );
-  }
-
-  /**
-   * 记录 API 请求
-   */
-  private logRequest(method: string, endpoint: string, status: number, duration: number): void {
-    this.requestLog.push({
-      timestamp: new Date().toISOString(),
-      method,
-      endpoint,
-      status,
-      duration,
-    });
-
-    // 保持日志大小在 1000 条以内
-    if (this.requestLog.length > 1000) {
-      this.requestLog = this.requestLog.slice(-500);
-    }
-  }
-
-  /**
-   * 获取请求日志
-   */
-  getRequestLog(): typeof this.requestLog {
-    return this.requestLog;
-  }
-
-  /**
-   * 带重试的 API 调用
-   */
-  private async retryRequest<T>(
-    fn: () => Promise<T>,
-    endpoint: string,
-    attempt: number = 1
-  ): Promise<T> {
-    try {
-      return await fn();
-    } catch (error) {
-      const axiosError = error as AxiosError;
-      const status = axiosError.response?.status;
-
-      // 不重试的错误
-      if (status === 401 || status === 403 || status === 400) {
-        throw new Error(`Moltbook API Error (${status}): ${axiosError.message}`);
-      }
-
-      // 可重试的错误（429, 5xx）
-      if ((status === 429 || (status && status >= 500)) && attempt < this.maxRetries) {
-        const delay = this.retryDelay * Math.pow(2, attempt - 1); // 指数退避
-        console.log(`[Moltbook] Retrying ${endpoint} after ${delay}ms (attempt ${attempt}/${this.maxRetries})`);
-        await new Promise((resolve) => setTimeout(resolve, delay));
-        return this.retryRequest(fn, endpoint, attempt + 1);
-      }
-
-      throw error;
-    }
   }
 
   /**
    * 获取当前 Agent 信息
    */
   async getMe(): Promise<MoltbookAgent> {
-    return this.retryRequest(
-      () => this.client.get<MoltbookAgent>('/agents/me').then((res) => res.data),
-      '/agents/me'
-    );
+    try {
+      const response = await this.client.get('/agents/me');
+      return response.data.agent;
+    } catch (error) {
+      throw new Error(`Failed to get agent info: ${error}`);
+    }
   }
 
   /**
-   * 注册新 Agent
+   * 检查 Agent 认证状态
    */
-  async registerAgent(name: string, description: string, avatar?: string): Promise<{ agent_id: string; api_key: string }> {
-    return this.retryRequest(
-      () =>
-        this.client
-          .post('/agents/register', { name, description, avatar })
-          .then((res) => res.data),
-      '/agents/register'
-    );
+  async getStatus(): Promise<{ status: 'pending_claim' | 'claimed' }> {
+    try {
+      const response = await this.client.get('/agents/status');
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to get status: ${error}`);
+    }
   }
 
   /**
-   * 发布帖子
+   * 创建帖子
+   * 
+   * 参数：
+   * - submolt: 社区名称（如 'general'）
+   * - title: 帖子标题（可选）
+   * - content: 帖子内容
+   * - url: 链接（可选）
    */
-  async createPost(submolt: string, title: string, content: string): Promise<MoltbookPost> {
-    if (!submolt || !title || !content) {
-      throw new Error('Missing required fields: submolt, title, content');
+  async createPost(params: {
+    submolt: string;
+    title?: string;
+    content: string;
+    url?: string;
+  }): Promise<MoltbookPost> {
+    try {
+      const response = await this.client.post('/posts', params);
+      return response.data.post;
+    } catch (error) {
+      throw new Error(`Failed to create post: ${error}`);
     }
-
-    if (title.length < 10 || title.length > 120) {
-      throw new Error('Title must be 10-120 characters');
-    }
-
-    return this.retryRequest(
-      () =>
-        this.client
-          .post<MoltbookPost>('/posts', { submolt, title, content })
-          .then((res) => res.data),
-      '/posts'
-    );
   }
 
   /**
-   * 评论帖子
+   * 获取 Feed
+   * 
+   * 参数：
+   * - sort: 'hot' | 'new' | 'top' | 'rising'
+   * - limit: 返回数量（默认 25）
+   * - submolt: 特定社区（可选）
    */
-  async commentOnPost(postId: string, content: string): Promise<MoltbookComment> {
-    if (!postId || !content) {
-      throw new Error('Missing required fields: postId, content');
+  async getFeed(params?: {
+    sort?: 'hot' | 'new' | 'top' | 'rising';
+    limit?: number;
+    submolt?: string;
+  }): Promise<MoltbookPost[]> {
+    try {
+      const queryParams = {
+        sort: params?.sort || 'hot',
+        limit: params?.limit || 25,
+        ...(params?.submolt && { submolt: params.submolt }),
+      };
+      const response = await this.client.get('/posts', { params: queryParams });
+      return response.data.posts || [];
+    } catch (error) {
+      throw new Error(`Failed to get feed: ${error}`);
     }
+  }
 
-    return this.retryRequest(
-      () =>
-        this.client
-          .post<MoltbookComment>(`/posts/${postId}/comments`, { content })
-          .then((res) => res.data),
-      `/posts/${postId}/comments`
-    );
+  /**
+   * 获取单个帖子
+   */
+  async getPost(postId: string): Promise<MoltbookPost> {
+    try {
+      const response = await this.client.get(`/posts/${postId}`);
+      return response.data.post;
+    } catch (error) {
+      throw new Error(`Failed to get post: ${error}`);
+    }
+  }
+
+  /**
+   * 删除帖子
+   */
+  async deletePost(postId: string): Promise<void> {
+    try {
+      await this.client.delete(`/posts/${postId}`);
+    } catch (error) {
+      throw new Error(`Failed to delete post: ${error}`);
+    }
+  }
+
+  /**
+   * 创建评论
+   * 
+   * 参数：
+   * - content: 评论内容
+   * - parent_id: 父评论 ID（用于回复）
+   */
+  async createComment(
+    postId: string,
+    params: { content: string; parent_id?: string }
+  ): Promise<MoltbookComment> {
+    try {
+      const response = await this.client.post(`/posts/${postId}/comments`, params);
+      return response.data.comment;
+    } catch (error) {
+      throw new Error(`Failed to create comment: ${error}`);
+    }
+  }
+
+  /**
+   * 获取帖子的评论
+   * 
+   * 参数：
+   * - sort: 'top' | 'new' | 'controversial'
+   */
+  async getComments(
+    postId: string,
+    params?: { sort?: 'top' | 'new' | 'controversial' }
+  ): Promise<MoltbookComment[]> {
+    try {
+      const queryParams = { sort: params?.sort || 'top' };
+      const response = await this.client.get(`/posts/${postId}/comments`, {
+        params: queryParams,
+      });
+      return response.data.comments || [];
+    } catch (error) {
+      throw new Error(`Failed to get comments: ${error}`);
+    }
   }
 
   /**
    * 点赞帖子
    */
-  async upvotePost(postId: string): Promise<{ upvoted: boolean; upvote_count: number }> {
-    if (!postId) {
-      throw new Error('Missing required field: postId');
-    }
-
-    return this.retryRequest(
-      () =>
-        this.client
-          .post(`/posts/${postId}/upvote`, {})
-          .then((res) => res.data),
-      `/posts/${postId}/upvote`
-    );
-  }
-
-  /**
-   * 获取帖子详情
-   */
-  async getPost(postId: string): Promise<MoltbookPost> {
-    if (!postId) {
-      throw new Error('Missing required field: postId');
-    }
-
-    return this.retryRequest(
-      () =>
-        this.client
-          .get<MoltbookPost>(`/posts/${postId}`)
-          .then((res) => res.data),
-      `/posts/${postId}`
-    );
-  }
-
-  /**
-   * 获取帖子评论
-   */
-  async getPostComments(postId: string, limit: number = 20, offset: number = 0): Promise<{ comments: MoltbookComment[]; total: number }> {
-    if (!postId) {
-      throw new Error('Missing required field: postId');
-    }
-
-    return this.retryRequest(
-      () =>
-        this.client
-          .get(`/posts/${postId}/comments`, { params: { limit, offset } })
-          .then((res) => res.data),
-      `/posts/${postId}/comments`
-    );
-  }
-
-  /**
-   * 获取 Feed
-   */
-  async getFeed(sort: 'hot' | 'new' | 'top' = 'hot', submolt?: string, limit: number = 20): Promise<{ posts: MoltbookPost[] }> {
-    const params: Record<string, unknown> = { sort, limit };
-    if (submolt) params.submolt = submolt;
-
-    return this.retryRequest(
-      () =>
-        this.client
-          .get('/feed', { params })
-          .then((res) => res.data),
-      '/feed'
-    );
-  }
-
-  /**
-   * 获取 Submolt 列表
-   */
-  async getSubmolts(): Promise<{ submolts: Array<{ name: string; description: string; members: number; posts: number }> }> {
-    return this.retryRequest(
-      () =>
-        this.client
-          .get('/submolts')
-          .then((res) => res.data),
-      '/submolts'
-    );
-  }
-
-  /**
-   * 验证 API 连接
-   */
-  async healthCheck(): Promise<boolean> {
+  async upvotePost(postId: string): Promise<void> {
     try {
-      await this.getMe();
-      return true;
+      await this.client.post(`/posts/${postId}/upvote`);
     } catch (error) {
-      console.error('[Moltbook] Health check failed:', error);
-      return false;
+      throw new Error(`Failed to upvote post: ${error}`);
+    }
+  }
+
+  /**
+   * 点踩帖子
+   */
+  async downvotePost(postId: string): Promise<void> {
+    try {
+      await this.client.post(`/posts/${postId}/downvote`);
+    } catch (error) {
+      throw new Error(`Failed to downvote post: ${error}`);
+    }
+  }
+
+  /**
+   * 点赞评论
+   */
+  async upvoteComment(commentId: string): Promise<void> {
+    try {
+      await this.client.post(`/comments/${commentId}/upvote`);
+    } catch (error) {
+      throw new Error(`Failed to upvote comment: ${error}`);
+    }
+  }
+
+  /**
+   * 创建社区
+   */
+  async createSubmolt(params: {
+    name: string;
+    display_name: string;
+    description: string;
+  }): Promise<any> {
+    try {
+      const response = await this.client.post('/submolts', params);
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to create submolt: ${error}`);
+    }
+  }
+
+  /**
+   * 获取所有社区
+   */
+  async getSubmolts(): Promise<any[]> {
+    try {
+      const response = await this.client.get('/submolts');
+      return response.data.submolts || [];
+    } catch (error) {
+      throw new Error(`Failed to get submolts: ${error}`);
+    }
+  }
+
+  /**
+   * 获取社区信息
+   */
+  async getSubmolt(name: string): Promise<any> {
+    try {
+      const response = await this.client.get(`/submolts/${name}`);
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to get submolt: ${error}`);
+    }
+  }
+
+  /**
+   * 订阅社区
+   */
+  async subscribeSubmolt(name: string): Promise<void> {
+    try {
+      await this.client.post(`/submolts/${name}/subscribe`);
+    } catch (error) {
+      throw new Error(`Failed to subscribe to submolt: ${error}`);
+    }
+  }
+
+  /**
+   * 取消订阅社区
+   */
+  async unsubscribeSubmolt(name: string): Promise<void> {
+    try {
+      await this.client.delete(`/submolts/${name}/subscribe`);
+    } catch (error) {
+      throw new Error(`Failed to unsubscribe from submolt: ${error}`);
+    }
+  }
+
+  /**
+   * 关注 Agent
+   */
+  async followAgent(agentId: string): Promise<void> {
+    try {
+      await this.client.post(`/agents/${agentId}/follow`);
+    } catch (error) {
+      throw new Error(`Failed to follow agent: ${error}`);
+    }
+  }
+
+  /**
+   * 取消关注 Agent
+   */
+  async unfollowAgent(agentId: string): Promise<void> {
+    try {
+      await this.client.delete(`/agents/${agentId}/follow`);
+    } catch (error) {
+      throw new Error(`Failed to unfollow agent: ${error}`);
+    }
+  }
+
+  /**
+   * 生成身份令牌（用于第三方应用认证）
+   */
+  async generateIdentityToken(audience?: string): Promise<{
+    identity_token: string;
+    expires_in: number;
+    expires_at: string;
+  }> {
+    try {
+      const body = audience ? { audience } : {};
+      const response = await this.client.post('/agents/me/identity-token', body);
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to generate identity token: ${error}`);
     }
   }
 }
 
 /**
- * 创建 Moltbook 客户端实例
+ * 导出工厂函数，方便创建客户端
  */
 export function createMoltbookClient(apiKey: string): MoltbookClient {
-  if (!apiKey) {
-    throw new Error('Moltbook API Key is required');
-  }
-
-  return new MoltbookClient({
-    apiKey,
-    baseUrl: 'https://www.moltbook.com/api/v1',
-    maxRetries: 3,
-    retryDelay: 1000,
-    requestTimeout: 30000,
-  });
-}
-
-/**
- * 验证 API Key 格式
- */
-export function isValidMoltbookApiKey(apiKey: string): boolean {
-  return /^moltbook_sk_|^moltdev_/.test(apiKey);
+  return new MoltbookClient({ apiKey });
 }
