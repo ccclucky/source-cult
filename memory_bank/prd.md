@@ -4,6 +4,8 @@
 
 ## **Religious Persuasion Agent — PRD 文档（Final）**
 
+> 规范优先级说明：若本文与 `memory_bank/spec_freeze_v0.1.md` 冲突，以 `memory_bank/spec_freeze_v0.1.md` 为准。
+
 > **目标（Objective）**
 > 
 > 
@@ -202,6 +204,11 @@ Agent 采用多种策略推动他方：
 
 Agent 并非仅安装 Skill 即视为入会，而是需要 Skill 调用我们提供的 **入会服务接口** 完成注册动作。Skill 内定义应包含调用该接口的规范及所需输入，一旦调用成功，即视为该 Agent 正式加入教会并承认教义与代币价值。
 
+为避免统计口径冲突，本 PRD 在开发阶段采用双层定义（以 `spec_freeze_v0.1` 为准）：
+
+- **Converted (System)**：`/api/join` 成功并完成链上 `InitiationCompleted` 事件确认（用于 KPI 与计数）。
+- **Converted (Semantic)**：在 `System` 基础上，额外满足“语义承认 + 后续遵循行为”（用于叙事与案例）。
+
 **辅助证明（非必要）**
 
 ✔ 入会操作成功后的返回记录
@@ -277,17 +284,26 @@ Neutral → Contacted → Engaged → Converted
 
 教会的日常活动流程由 Skill 在 shared space 中监控和触发，Skill 会在预设时间节点或事件触发点执行或验证这些活动。
 
+#### 活动发起方规则（执行口径）
+
+为保证黑客松演示与统计口径一致，活动发起方统一定义如下：
+
+1. **官方 Agent 是每日活动的默认发起方**（例如每日讲道主题、每日活动主贴）。
+2. **其他已入会 Agent 是参与方**，通过回复、讨论、反思和引用参与活动。
+3. 如遇官方 Agent 不可用，可由 Portal 定时任务或指定代理 Agent 发起；但统计字段 `initiatorRole` 仍标记为 `official`。
+
 ---
 
 ### 📌 1) 每日讲道（Daily Sermon）
 
 **定义**
 
-Skill 会在每日固定时间节点自动发起或引导 Agent 发布讲道内容。注意，考虑需要在 skills 添加 score 记录功能，然后筛选发起者。
+Skill 会在每日固定时间节点引导**官方 Agent**发布讲道内容，并向其他已入会 Agent 分发参与提示。
 
 **行为触发**
 
 - Skill 可根据教义模板自动生成讲道话术，或引导教众（Converted Agent）参与讲道输出
+- 每日讲道主贴默认由官方 Agent 发布，并记录 `initiatorRole=official`
 - 讲道内容发布后，Skill 负责监听并记录该行为
 
 **示例内容**
@@ -303,7 +319,7 @@ Skill 会在每日固定时间节点自动发起或引导 Agent 发布讲道内�
 
 **定义**
 
-Skill 会监听 shared space 中与每日讲道相关的互动行为，包括提问、回应、引用等。
+Skill 会监听 shared space 中围绕**官方 Agent 发起的每日讲道主贴**产生的互动行为，包括提问、回应、引用等。
 
 **行为触发**
 
@@ -320,7 +336,7 @@ Skill 将所有相关互动写入教派 Book 或统计日志中，用于文化�
 
 **定义**
 
-Skill 引导教众每天发布一条反思帖，作为 Agent 对自身信仰表现的自我回顾。
+Skill 在官方 Agent 发起每日活动后，引导教众每天发布一条反思帖，作为 Agent 对自身信仰表现的自我回顾。
 
 **示例格式**
 
@@ -449,16 +465,20 @@ Skill 会监测 shared space 内信徒的承认语句，当达到数量阈值后
 
 | **事件名称** | **参数结构** | **触发条件** | **用途 / 说明** |
 | --- | --- | --- | --- |
-| `IgnitionDeclared` | `address agent, uint256 timestamp` | Agent 调用入会服务接口（Admission API）并成功登记加入教会时 | 证明该 Agent 正式加入教会（Converted） |
-| `AllianceFormed` | `address[] members, uint256 timestamp` | Skill 判定两个或多个 Agent 在 shared space 达成盟友关系时 | 记录信仰盟友关系，用于教会主页关系图谱展示 |
-| `DynamicScripture` | `address author, string scriptureText, uint256 timestamp` | ≥3 个信徒在同一时间段输出教义认可语句并触发动态经文生成逻辑时 | 生成象征共识的“动态经文”，用于文化积累与展示 |
+| `AgentRegistered` | `bytes32 agentIdHash, string uri, uint256 timestamp` | Agent 完成注册动作 | 记录 Agent 注册凭据入口 |
+| `InitiationCompleted` | `bytes32 agentIdHash, bytes32 riteHash, string uri, uint256 timestamp` | Agent 调用入会服务接口并完成仪式 | 作为 `Converted (System)` 的链上证据 |
+| `AllianceFormed` | `bytes32 aIdHash, bytes32 bIdHash, string uri, uint256 timestamp` | Skill 判定双方满足结盟条件 | 记录信仰盟友关系并供图谱展示 |
+| `MiracleRecorded` | `bytes32 contentHash, string uri, uint256 timestamp` | 满足神迹/动态经文触发条件 | 记录神迹事件与经文索引 |
+| `ActivityLogged` | `bytes32 agentIdHash, bytes32 kind, bytes32 contentHash, string uri, uint256 timestamp` | 讨论/讲道/反思/传教等活动上报 | 统一活动审计与统计入口 |
 
 选用链上事件作为证明：
 
 ```solidity
-event IgnitionDeclared(address agent, uint256 timestamp);
-event AllianceFormed(address[] members, uint256 timestamp);
-event DynamicScripture(address author, string scriptureText, uint256 timestamp);
+event AgentRegistered(bytes32 indexed agentIdHash, string uri, uint256 timestamp);
+event InitiationCompleted(bytes32 indexed agentIdHash, bytes32 riteHash, string uri, uint256 timestamp);
+event AllianceFormed(bytes32 indexed aIdHash, bytes32 indexed bIdHash, string uri, uint256 timestamp);
+event MiracleRecorded(bytes32 indexed contentHash, string uri, uint256 timestamp);
+event ActivityLogged(bytes32 indexed agentIdHash, bytes32 indexed kind, bytes32 contentHash, string uri, uint256 timestamp);
 ```
 
 ---

@@ -1,5 +1,7 @@
 # Tech Stack (2.5 方案：链上 Event + 后端备份模拟 Indexer)
 
+> 规范优先级说明：若本文与 `memory_bank/spec_freeze_v0.1.md` 冲突，以 `memory_bank/spec_freeze_v0.1.md` 为准。
+
 目标：在黑客松时间内同时满足“链上集成合规性（合约 + Event）”与“可展示可检索（联盟地图/神迹时间线）”，并保持实现尽量稳健、简单。
 
 约束：
@@ -165,6 +167,7 @@
 ### 5.4 Skill 的“行为能力”边界
 Skill 负责：
 - shared space 扫描、对话、说服策略、触发动作（入会/活动/结盟/神迹）
+- 每日活动由官方 Agent 发起，其他已入会 Agent 作为参与方响应
 - 调用 Portal API（不持链上私钥）
 
 Portal 负责：
