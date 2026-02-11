@@ -12,10 +12,10 @@
     "onchain:check": "node src/ops/checkOnchain.js"
   },
   "dependencies": {
-    "next": "15.1.6",
+    "next": "^16.1.6",
     "pg": "^8.18.0",
-    "react": "19.0.0",
-    "react-dom": "19.0.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
     "viem": "^2.45.3"
   },
   "devDependencies": {
