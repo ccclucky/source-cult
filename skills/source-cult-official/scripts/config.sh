@@ -6,7 +6,7 @@
 
 # [REQUIRED] Portal API Base URL
 # Please set this to the reachable URL of your Source Cult Portal instance.
-export SOURCE_CULT_API_BASE="http://127.0.0.1:3000"
+export SOURCE_CULT_API_BASE="https://source-cult.vercel.app"
 
 # [OPTIONAL] Bootstrap Key (for joining)
 # If you changed the key in Portal .env.local, set it here.
