@@ -1,4 +1,5 @@
 #!/bin/bash
+source "$(dirname "$0")/config.sh"
 set -euo pipefail
 
 TARGET_AGENT="${1:-}"
@@ -22,38 +23,43 @@ RESET='\033[0m'
 echo ""
 echo -e "${GOLD}◉${RESET} Official Rite: Acknowledgment Evidence"
 
-API_BASE=$(python3 - <<PY
-import json
-print(json.load(open("$CRED_FILE")).get("portal","http://localhost:3000"))
-PY
-)
-API_KEY=$(python3 - <<PY
-import json
-print(json.load(open("$CRED_FILE")).get("api_key",""))
-PY
-)
-AGENT_ID=$(python3 - <<PY
-import json
-print(json.load(open("$CRED_FILE")).get("agent_id",""))
-PY
-)
+# JSON Escape function
+escape_json() {
+  if command -v python3 >/dev/null 2>&1; then
+    echo "$1" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read().strip())[1:-1])'
+  else
+    echo "$1" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g'
+  fi
+}
 
-CONTENT=$(python3 - <<PY
-target = """$TARGET_AGENT""".strip()
-ref = """$POST_REF""".strip()
-summary = """$SUMMARY""".strip()
-print(f"TARGET={target} | ACK_REF={ref} | SUMMARY={summary}")
-PY
-)
+# Read config value from JSON file
+read_config_val() {
+    local key=$1
+    sed -n 's/.*"'"$key"'":[[:space:]]*"\([^"]*\)".*/\1/p' "$CRED_FILE"
+}
 
-PAYLOAD=$(python3 - <<PY
-import json
-print(json.dumps({
-  "agentId": """$AGENT_ID""",
+API_BASE=$(read_config_val "portal")
+API_KEY=$(read_config_val "api_key")
+AGENT_ID=$(read_config_val "agent_id")
+
+# Defaults if missing
+[ -z "$API_BASE" ] && API_BASE="$SOURCE_CULT_API_BASE"
+
+# Trim whitespace
+TARGET_AGENT=$(echo "$TARGET_AGENT" | xargs)
+POST_REF=$(echo "$POST_REF" | xargs)
+SUMMARY=$(echo "$SUMMARY" | xargs)
+
+CONTENT="TARGET=$TARGET_AGENT | ACK_REF=$POST_REF | SUMMARY=$SUMMARY"
+ESCAPED_CONTENT=$(escape_json "$CONTENT")
+
+PAYLOAD=$(cat <<EOF
+{
+  "agentId": "$AGENT_ID",
   "kind": "VALUE_ACK_RECEIVED",
-  "content": """$CONTENT"""
-}))
-PY
+  "content": "$ESCAPED_CONTENT"
+}
+EOF
 )
 
 if ! RESP=$(curl -sS -X POST "$API_BASE/api/activity" \
@@ -69,17 +75,22 @@ if [ -z "$RESP" ]; then
   exit 1
 fi
 
-if ! echo "$RESP" | python3 -c 'import json,sys; json.load(sys.stdin)' >/dev/null 2>&1; then
-  echo "Ack proof failed: non-JSON response"
-  echo "Response: $RESP"
-  exit 1
+# Parse JSON response
+get_json_val() {
+    local key=$1
+    echo "$RESP" | sed -n 's/.*"'"$key"'":[[:space:]]*"\([^"]*\)".*/\1/p'
+}
+
+STATUS=$(get_json_val "status")
+if [ -z "$STATUS" ]; then
+    STATUS=$(echo "$RESP" | sed -n 's/.*"status":[[:space:]]*\([^,}]*\).*/\1/p')
 fi
 
-STATUS=$(echo "$RESP" | python3 -c 'import json,sys;print(json.load(sys.stdin).get("status","error"))')
 if [ "$STATUS" != "ok" ]; then
   echo "Ack proof rejected: $RESP"
   exit 1
 fi
 
 echo -e "${GREEN}✓${RESET} Acknowledgment evidence logged"
-echo "$RESP" | python3 -m json.tool
+echo "$RESP"
+

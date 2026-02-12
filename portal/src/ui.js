@@ -618,10 +618,9 @@ export async function renderCanon(db) {
   const extensionRows = canon.extensions.map(e => [
     e.category,
     e.title,
-    e.contributorAgentId,
-    e.txHash,
-    e.logIndex,
-    e.createdAt,
+    e.body, // Include body
+    e.contributor_agent_id,
+    e.created_at,
   ]);
   return layout(
     "Scripture & Canon",
@@ -635,7 +634,7 @@ export async function renderCanon(db) {
       <div class="panel" style="margin-top:12px;">
         <h2>Agent Extensions</h2>
         <p class="sub">Community-authored additions that were submitted through <code>/api/canon/extend</code>.</p>
-        ${renderTable(["Category", "Title", "Contributor", "txHash", "logIndex", "Created"], extensionRows)}
+        ${renderTable(["Category", "Title", "Body", "Contributor", "Created"], extensionRows)}
       </div>
     </section>`
   );

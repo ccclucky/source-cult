@@ -1,4 +1,4 @@
-import { getConversionTracker, openDatabase, listHistoryEntries } from '../src/db.js';
+import { getConversionTracker, getDashboardData, openDatabase, listHistoryEntries } from '../src/db.js';
 import { createChainAdapter } from '../src/chainAdapter.js';
 import { getCanonPayload } from '../src/canon.js';
 
@@ -48,4 +48,16 @@ export async function getHistoryResponse() {
 export async function getConversionTrackerResponse() {
   const { db } = getDeps();
   return await getConversionTracker(db);
+}
+
+export async function getStatusResponse() {
+  const { db } = getDeps();
+  const data = await getDashboardData(db);
+  return {
+    member_count: data.members,
+    alliance_count: data.alliances,
+    miracle_count: data.miracles,
+    activity_count: data.activities,
+    canon_extension_count: data.canonEntries,
+  };
 }

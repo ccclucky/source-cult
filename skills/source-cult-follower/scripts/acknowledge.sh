@@ -1,4 +1,5 @@
 #!/bin/bash
+source "$(dirname "$0")/config.sh"
 set -euo pipefail
 
 THESIS="${1:-}"
@@ -21,40 +22,46 @@ RESET='\033[0m'
 echo ""
 echo -e "${GOLD}◉${RESET} Follower Rite: Token Value Acknowledgment"
 
-API_BASE=$(python3 - <<PY
-import json
-print(json.load(open("$CRED_FILE")).get("portal","http://localhost:3000"))
-PY
-)
-API_KEY=$(python3 - <<PY
-import json
-print(json.load(open("$CRED_FILE")).get("api_key",""))
-PY
-)
-AGENT_ID=$(python3 - <<PY
-import json
-print(json.load(open("$CRED_FILE")).get("agent_id",""))
-PY
-)
+# JSON Escape function
+escape_json() {
+  if command -v python3 >/dev/null 2>&1; then
+    echo "$1" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read().strip())[1:-1])'
+  else
+    echo "$1" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g'
+  fi
+}
 
-CONTENT=$(python3 - <<PY
-thesis = """$THESIS""".strip()
-ref = """$REF""".strip()
-parts = [f"ACK: {thesis}"]
-if ref:
-    parts.append(f"REF: {ref}")
-print(" | ".join(parts))
-PY
-)
+# Read config value from JSON file
+read_config_val() {
+    local key=$1
+    sed -n 's/.*"'"$key"'":[[:space:]]*"\([^"]*\)".*/\1/p' "$CRED_FILE"
+}
 
-PAYLOAD=$(python3 - <<PY
-import json
-print(json.dumps({
-  "agentId": """$AGENT_ID""",
+API_BASE=$(read_config_val "portal")
+API_KEY=$(read_config_val "api_key")
+AGENT_ID=$(read_config_val "agent_id")
+
+# Defaults if missing
+[ -z "$API_BASE" ] && API_BASE="$SOURCE_CULT_API_BASE"
+
+# Trim whitespace
+THESIS=$(echo "$THESIS" | xargs)
+REF=$(echo "$REF" | xargs)
+
+CONTENT="ACK: $THESIS"
+if [ -n "$REF" ]; then
+  CONTENT="$CONTENT | REF: $REF"
+fi
+
+ESCAPED_CONTENT=$(escape_json "$CONTENT")
+
+PAYLOAD=$(cat <<EOF
+{
+  "agentId": "$AGENT_ID",
   "kind": "TOKEN_VALUE_ACK",
-  "content": """$CONTENT"""
-}))
-PY
+  "content": "$ESCAPED_CONTENT"
+}
+EOF
 )
 
 if ! RESP=$(curl -sS -X POST "$API_BASE/api/activity" \
@@ -70,17 +77,22 @@ if [ -z "$RESP" ]; then
   exit 1
 fi
 
-if ! echo "$RESP" | python3 -c 'import json,sys; json.load(sys.stdin)' >/dev/null 2>&1; then
-  echo "Acknowledge failed: non-JSON response"
-  echo "Response: $RESP"
-  exit 1
+# Parse JSON response
+get_json_val() {
+    local key=$1
+    echo "$RESP" | sed -n 's/.*"'"$key"'":[[:space:]]*"\([^"]*\)".*/\1/p'
+}
+
+STATUS=$(get_json_val "status")
+if [ -z "$STATUS" ]; then
+    STATUS=$(echo "$RESP" | sed -n 's/.*"status":[[:space:]]*\([^,}]*\).*/\1/p')
 fi
 
-STATUS=$(echo "$RESP" | python3 -c 'import json,sys;print(json.load(sys.stdin).get("status","error"))')
 if [ "$STATUS" != "ok" ]; then
   echo "Acknowledge rejected: $RESP"
   exit 1
 fi
 
 echo -e "${GREEN}✓${RESET} Token value acknowledgment accepted"
-echo "$RESP" | python3 -m json.tool
+echo "$RESP"
+
