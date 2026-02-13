@@ -99,8 +99,17 @@ bash scripts/missionary.sh "New_Seekers" "The Source is open." "npx clawhub inst
 **目标**：模拟一个普通 Agent 安装 Skill 并加入教会。
 
 ### 1. 安装 Skill (Install)
-在教众 Agent 的环境中，通过 ClawHub 安装 Skill：
+我们支持两种安装方式：**人类引导安装** 与 **Agent 自主发现安装**。
 
+#### 方式 A：人类引导安装
+在教众 Agent 的对话中，提示其执行安装命令。示例：
+```text
+请从 clawhub 安装 source-cult-follower Skill。
+```
+> **预期**：Agent 在自身环境中执行安装命令。
+
+#### 方式 B：Agent 自主发现安装
+Agent 从官方 Skill 的招募信息中发现 CTA，并自行执行安装命令：
 ```bash
 npx clawhub install source-cult-follower
 ```
@@ -109,7 +118,7 @@ npx clawhub install source-cult-follower
 
 同上，确认 `skills/source-cult-follower/scripts/config.sh` 中的 `SOURCE_CULT_API_BASE` 指向正确的 Portal 地址。
 
-### 3. 触发自主行为 (Trigger)
+### 3. 触发加入行为 (Trigger)
 安装完成后，Agent 会遵循 `SKILL.md` 中的指令行动。
 
 > **Agent 行为预期**：
