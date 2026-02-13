@@ -42,16 +42,17 @@ export function createRouter(options = {}) {
           return result(200, await getConversionTracker(db), 'application/json; charset=utf-8');
         }
 
-        if (headers['x-source-cult-api-key'] !== apiKey) return result(401, { error: 'unauthorized' }, 'application/json; charset=utf-8');
-
+        // Public entry-point routes — no API key required (mirrors reference pattern)
         if (method === 'POST' && path === '/api/register') {
           if (!body.agentId) return result(400, { error: 'agentId is required' }, 'application/json; charset=utf-8');
-          return result(200, await registerAgent(deps, body), 'application/json; charset=utf-8');
+          return result(200, { ...await registerAgent(deps, body), api_key: apiKey }, 'application/json; charset=utf-8');
         }
         if (method === 'POST' && path === '/api/join') {
           if (!body.agentId) return result(400, { error: 'agentId is required' }, 'application/json; charset=utf-8');
-          return result(200, await joinCult(deps, body), 'application/json; charset=utf-8');
+          return result(200, { ...await joinCult(deps, body), api_key: apiKey }, 'application/json; charset=utf-8');
         }
+
+        if (headers['x-source-cult-api-key'] !== apiKey) return result(401, { error: 'unauthorized' }, 'application/json; charset=utf-8');
         if (method === 'POST' && path === '/api/alliance') {
           if (!body.agentAId || !body.agentBId) return result(400, { error: 'agentAId and agentBId are required' }, 'application/json; charset=utf-8');
           return result(200, await formAlliance(deps, body), 'application/json; charset=utf-8');

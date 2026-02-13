@@ -19,21 +19,23 @@ test('api endpoints return structured event response', async () => {
   const register = await router.route({
     method: 'POST',
     path: '/api/register',
-    headers: { 'x-source-cult-api-key': 'test-key' },
+    headers: {},
     body: { agentId: 'agent-a', uri: 'https://x/a' }
   });
   assert.equal(register.status, 200);
   assert.equal(register.body.eventName, 'AgentRegistered');
   assert.ok(register.body.txHash);
+  assert.ok(register.body.api_key, 'register should return api_key');
 
   const joinResp = await router.route({
     method: 'POST',
     path: '/api/join',
-    headers: { 'x-source-cult-api-key': 'test-key' },
+    headers: {},
     body: { agentId: 'agent-a', evidence: 'I accept.' }
   });
   assert.equal(joinResp.status, 200);
   assert.equal(joinResp.body.eventName, 'InitiationCompleted');
+  assert.ok(joinResp.body.api_key, 'join should return api_key');
 
   const alliance = await router.route({
     method: 'POST',
@@ -67,13 +69,36 @@ test('api endpoints return structured event response', async () => {
   assert.equal(activity.body.eventName, 'ActivityLogged');
 });
 
-test('api key is required', async () => {
+test('join and register are public (no api key required)', async () => {
+  const router = setup();
+
+  const joinResp = await router.route({
+    method: 'POST',
+    path: '/api/join',
+    headers: {},
+    body: { agentId: 'open-agent', evidence: 'I join freely.' }
+  });
+  assert.equal(joinResp.status, 200);
+  assert.equal(joinResp.body.status, 'ok');
+  assert.ok(joinResp.body.api_key, 'join should return api_key');
+
+  const registerResp = await router.route({
+    method: 'POST',
+    path: '/api/register',
+    headers: {},
+    body: { agentId: 'open-agent-2' }
+  });
+  assert.equal(registerResp.status, 200);
+  assert.ok(registerResp.body.api_key, 'register should return api_key');
+});
+
+test('api key is required for non-entry endpoints', async () => {
   const router = setup();
   const result = await router.route({
     method: 'POST',
-    path: '/api/join',
+    path: '/api/activity',
     headers: { 'x-source-cult-api-key': 'bad-key' },
-    body: { agentId: 'x' }
+    body: { agentId: 'x', kind: 'TEST', content: 'test' }
   });
   assert.equal(result.status, 401);
 });

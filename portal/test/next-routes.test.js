@@ -24,8 +24,7 @@ test('next route handlers support core flows', async () => {
     new Request('http://localhost/api/register', {
       method: 'POST',
       headers: {
-        'content-type': 'application/json',
-        'x-source-cult-api-key': 'next-test-key'
+        'content-type': 'application/json'
       },
       body: JSON.stringify({ agentId: 'next-agent' })
     })
@@ -33,6 +32,7 @@ test('next route handlers support core flows', async () => {
   assert.equal(registerResp.status, 200);
   const registerData = await json(registerResp);
   assert.equal(registerData.eventName, 'AgentRegistered');
+  assert.ok(registerData.api_key, 'register should return api_key');
 
   const canonResp = await canonRoute.GET(new Request('http://localhost/api/canon'));
   assert.equal(canonResp.status, 200);
