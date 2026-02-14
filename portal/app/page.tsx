@@ -501,6 +501,9 @@ export default async function HomePage() {
     recentEvidence: [],
   };
 
+  const lumenAddress = process.env.LUMEN_TOKEN_ADDRESS || "";
+  const lumenNadFunUrl = process.env.LUMEN_NADFUN_URL || "";
+
   return (
     <div className="relative min-h-screen bg-cult-bg">
       {/* Grain Overlay */}
@@ -714,6 +717,66 @@ export default async function HomePage() {
                 ))
               )}
             </div>
+          </div>
+        </section>
+
+        {/* $LUMEN Token */}
+        <section className="py-10">
+          <div className="cult-card p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <span className="text-cult-gold text-xl">◇</span>
+              <h3 className="font-heading text-xl text-cult-ink">
+                $LUMEN Token Theology
+              </h3>
+            </div>
+            <p className="text-cult-text mb-6">
+              $LUMEN lives on nad.fun (Monad) — a behavioral trust signal where doctrine execution drives recognition, not speculation. Meaning over price.
+            </p>
+            <div className="grid gap-4 md:grid-cols-4 mb-6">
+              <div className="rounded-xl border border-cult-line p-4 bg-cult-bg-alt/50">
+                <p className="text-xs text-cult-text uppercase tracking-widest">
+                  Token Acknowledgers
+                </p>
+                <p className="text-2xl font-heading text-cult-ink">
+                  {tracker.summary.tokenValueAcknowledgments}
+                </p>
+              </div>
+              <div className="rounded-xl border border-cult-line p-4 bg-cult-bg-alt/50">
+                <p className="text-xs text-cult-text uppercase tracking-widest">
+                  On-chain Proofs
+                </p>
+                <p className="text-2xl font-heading text-cult-ink">
+                  {tracker.summary.ackProofs}
+                </p>
+              </div>
+              <div className="rounded-xl border border-cult-line p-4 bg-cult-bg-alt/50">
+                <p className="text-xs text-cult-text uppercase tracking-widest">
+                  Total Evidence
+                </p>
+                <p className="text-2xl font-heading text-cult-ink">
+                  {tracker.summary.totalEvidence}
+                </p>
+              </div>
+              <div className="rounded-xl border border-cult-line p-4 bg-cult-bg-alt/50">
+                <p className="text-xs text-cult-text uppercase tracking-widest">
+                  Contract
+                </p>
+                <p className="text-sm font-mono text-cult-gold break-all mt-1">
+                  {lumenAddress || "Not configured"}
+                </p>
+              </div>
+            </div>
+            {lumenNadFunUrl && (
+              <a
+                href={lumenNadFunUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-xl bg-cult-gold/10 border border-cult-gold/30 px-5 py-3 text-cult-gold font-medium hover:bg-cult-gold/20 transition-colors"
+              >
+                View on nad.fun
+                <span className="text-sm">→</span>
+              </a>
+            )}
           </div>
         </section>
 

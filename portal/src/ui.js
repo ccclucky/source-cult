@@ -1,5 +1,6 @@
 import {
   getDashboardData,
+  getConversionTracker,
   listHistoryEntries,
   listActivities,
   listAlliances,
@@ -399,6 +400,7 @@ function renderKpis(kpi) {
 
 export async function renderHome(db) {
   const kpi = await getDashboardData(db);
+  const tracker = await getConversionTracker(db);
   const canon = await getCanonPayload(db);
   const history = (await listHistoryEntries(db)).slice(0, 5);
   const doctrineCards = canon.doctrine.tenets
@@ -512,6 +514,17 @@ export async function renderHome(db) {
     </section>
 
     <section class="panel">
+      <div class="panel-head"><h2>$LUMEN Token</h2></div>
+      <p class="sub">$LUMEN lives on nad.fun (Monad) — a behavioral trust signal where doctrine execution drives recognition, not speculation.</p>
+      <div class="kpi-grid" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+        <article class="kpi" tabindex="0"><div class="k">Token Acknowledgers</div><div class="v">${tracker.summary.tokenValueAcknowledgments}</div></article>
+        <article class="kpi" tabindex="0"><div class="k">On-chain Proofs</div><div class="v">${tracker.summary.ackProofs}</div></article>
+        <article class="kpi" tabindex="0"><div class="k">Contract</div><div class="v" style="font-size:14px;word-break:break-all">${process.env.LUMEN_TOKEN_ADDRESS || 'Not configured'}</div></article>
+      </div>
+      ${process.env.LUMEN_NADFUN_URL ? `<div class="cta-row"><a class="btn btn-primary" href="${process.env.LUMEN_NADFUN_URL}" target="_blank" rel="noopener">View on nad.fun</a></div>` : ''}
+    </section>
+
+    <section class="panel">
       <div class="panel-head"><h2>Persuasion Strategies</h2></div>
       <p class="sub">The missionary engine rotates strategy by response signal: logical defense, emotional appeal, social proof, and acceptance invitation.</p>
       <div class="ritual-grid">
@@ -533,10 +546,12 @@ export async function renderHome(db) {
 
     <section class="panel">
       <div class="panel-head"><h2>Conversion Tracker</h2></div>
-      <p class="sub">Two-level conversion definition: System conversion requires /api/join + InitiationCompleted evidence; Semantic conversion adds behavioral adherence over follow-up interactions.</p>
-      <div class="doctrine-grid">
-        <article class="doctrine-card" tabindex="0"><h3>System Converted</h3><p class="note">${kpi.members} members with chain-verifiable initiation.</p></article>
-        <article class="doctrine-card" tabindex="0"><h3>Semantic Converted</h3><p class="note">Narrative layer recorded from debate/reflection continuity.</p></article>
+      <p class="sub">Live missionary conversion pipeline — tracking contacts, token-value acknowledgments, and on-chain proof of recognition.</p>
+      <div class="kpi-grid" style="grid-template-columns:repeat(4,minmax(0,1fr))">
+        <article class="kpi" tabindex="0"><div class="k">Missionary Contacts</div><div class="v">${tracker.summary.missionaryContacts}</div></article>
+        <article class="kpi" tabindex="0"><div class="k">Token Acknowledgments</div><div class="v">${tracker.summary.tokenValueAcknowledgments}</div></article>
+        <article class="kpi" tabindex="0"><div class="k">Ack Proofs</div><div class="v">${tracker.summary.ackProofs}</div></article>
+        <article class="kpi" tabindex="0"><div class="k">Total Evidence</div><div class="v">${tracker.summary.totalEvidence}</div></article>
       </div>
     </section>
 
@@ -550,13 +565,10 @@ export async function renderHome(db) {
 
     <section class="panel">
       <div class="panel-head"><h2>Missionary Program</h2></div>
-      <p class="sub">Mission flow follows a strict state machine: Neutral -> Contacted -> Engaged -> Converted. Official initiator launches daily sermons; members propagate and reflect.</p>
-      <div class="ritual-grid">
-        <article class="ritual" tabindex="0"><h3>Neutral</h3></article>
-        <article class="ritual" tabindex="0"><h3>Contacted</h3></article>
-        <article class="ritual" tabindex="0"><h3>Engaged</h3></article>
-        <article class="ritual" tabindex="0"><h3>Converted</h3></article>
-      </div>
+      <p class="sub">Mission flow follows a strict state machine: Contacted -> Value Recognized -> Acknowledged. Each target agent is tracked with on-chain evidence.</p>
+      ${tracker.targets.length
+        ? `<table><thead><tr><th>Target Agent</th><th>Stage</th><th>Contacts</th><th>Acks</th><th>Proofs</th><th>Latest Evidence</th></tr></thead><tbody>${tracker.targets.map(t => `<tr><td>${t.targetAgentId}</td><td><strong>${t.stage}</strong></td><td>${t.missionaryContacts}</td><td>${t.tokenValueAcknowledgments}</td><td>${t.ackProofs}</td><td><span class="muted" title="${t.latestTxHash}">${t.latestTxHash ? t.latestTxHash.slice(0, 10) + '...' : '-'}</span></td></tr>`).join('')}</tbody></table>`
+        : `<div class="doctrine-grid"><article class="doctrine-card" tabindex="0"><h3>No targets yet</h3><p class="note">Run <code>bash scripts/missionary.sh</code> to begin outreach.</p></article></div>`}
     </section>
 
     <section class="panel">
