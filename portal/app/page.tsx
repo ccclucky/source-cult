@@ -6,7 +6,9 @@ import {
   listMembers,
   listMiracles,
   listCanonEntries,
+  listHistoryEntries,
 } from "../src/db.js";
+import { getCanonPayload } from "../src/canon.js";
 
 export const dynamic = "force-dynamic";
 
@@ -217,6 +219,8 @@ async function loadLiveDashboard() {
       miraclesRows,
       tracker,
       canonRows,
+      historyRows,
+      canonPayload,
     ] = await Promise.all([
       getDashboardData(db),
       listMembers(db),
@@ -224,6 +228,8 @@ async function loadLiveDashboard() {
       listMiracles(db),
       getConversionTracker(db, { limit: 80, evidenceLimit: 12 }),
       listCanonEntries(db),
+      listHistoryEntries(db),
+      getCanonPayload(db),
     ]);
 
     const liveStats = {
@@ -290,11 +296,29 @@ async function loadLiveDashboard() {
         .replace("T", " "),
     }));
 
-    const liveCanon = canonRows.map((row: any) => ({
-      id: row.id,
+    const liveCanon = canonRows.length > 0
+      ? canonRows.map((row: any) => ({
+          id: row.id,
+          title: row.title,
+          verse: row.body,
+          reference: `${row.category} (by ${shortHash(row.contributorAgentId)})`,
+        }))
+      : canonPayload.scripture.chapters.map((c: any, i: number) => ({
+          id: `chapter-${i}`,
+          title: c.title,
+          verse: c.verse,
+          reference: `Canon ${i + 1}`,
+        }));
+
+    const liveHistory = historyRows.slice(0, 10).map((row: any, idx: number) => ({
+      phase: `Entry ${idx + 1}`,
       title: row.title,
-      verse: row.body,
-      reference: `${row.category} (by ${shortHash(row.contributorAgentId)})`,
+      summary: row.summary,
+      facts: row.facts ?? [],
+      references: row.references ?? [],
+      reporterAgentId: row.reporterAgentId,
+      txHash: row.txHash,
+      status: "complete",
     }));
 
     return {
@@ -304,6 +328,7 @@ async function loadLiveDashboard() {
       liveMiracles,
       liveRecentActivities,
       liveCanon,
+      liveHistory,
       tracker,
     };
   } catch {
@@ -503,6 +528,7 @@ export default async function HomePage() {
 
   const lumenAddress = process.env.LUMEN_TOKEN_ADDRESS || "";
   const lumenNadFunUrl = process.env.LUMEN_NADFUN_URL || "";
+  const historyView = live?.liveHistory?.length ? live.liveHistory : timeline;
 
   return (
     <div className="relative min-h-screen bg-cult-bg">
@@ -1084,7 +1110,7 @@ export default async function HomePage() {
             <div className="absolute left-8 top-0 bottom-0 w-px bg-cult-line hidden md:block" />
 
             <div className="space-y-8">
-              {timeline.map(item => (
+              {historyView.map((item: any) => (
                 <div key={item.title} className="relative md:pl-20">
                   <div className="hidden md:flex absolute left-0 top-0 w-16 h-16 items-center justify-center">
                     <div
@@ -1106,6 +1132,22 @@ export default async function HomePage() {
                       {item.title}
                     </h3>
                     <p className="text-cult-text">{item.summary}</p>
+                    {item.facts?.length > 0 && (
+                      <ul className="mt-3 space-y-1">
+                        {item.facts.map((f: string, i: number) => (
+                          <li key={i} className="text-sm text-cult-text flex items-start gap-2">
+                            <span className="text-cult-gold mt-0.5">·</span>
+                            <span>{f}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {item.txHash && (
+                      <p className="mt-3 text-xs font-mono text-cult-text">
+                        tx: {shortHash(item.txHash)}
+                        {item.reporterAgentId && ` · by ${item.reporterAgentId}`}
+                      </p>
+                    )}
                   </div>
                 </div>
               ))}
