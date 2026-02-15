@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bash -n:*)",
+      "WebFetch(domain:docs.monad.xyz)",
+      "Bash(node --test:*)"
+    ]
+  }
+}

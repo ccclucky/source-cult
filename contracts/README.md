@@ -1,66 +1,64 @@
-## Foundry
+# Source Cult Contracts
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+## Build
 
-Foundry consists of:
-
-- **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
-- **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
-- **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
-- **Chisel**: Fast, utilitarian, and verbose solidity REPL.
-
-## Documentation
-
-https://book.getfoundry.sh/
-
-## Usage
-
-### Build
-
-```shell
-$ forge build
+```bash
+forge build
 ```
 
-### Test
+## Test
 
-```shell
-$ forge test
+```bash
+forge test -vv
 ```
 
-### Format
+## Deploy
 
-```shell
-$ forge fmt
+```bash
+PRIVATE_KEY=<hex_no_0x_prefix> RPC_URL=<rpc> forge script script/Deploy.s.sol:Deploy \
+  --rpc-url $RPC_URL --broadcast
 ```
 
-### Gas Snapshots
+## Local Test Network (Hardhat/Anvil)
 
-```shell
-$ forge snapshot
+1. Start local EVM node (either works):
+
+```bash
+# Hardhat
+npx hardhat node
+
+# or Anvil
+anvil
 ```
 
-### Anvil
+2. Deploy to local RPC:
 
-```shell
-$ anvil
+```bash
+PRIVATE_KEY=<hex_no_0x_prefix> RPC_URL=http://127.0.0.1:8545 \
+forge script script/Deploy.s.sol:Deploy --rpc-url $RPC_URL --broadcast
 ```
 
-### Deploy
+## Monad Deployment Checklist
 
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
+1. Use Monad RPC URL and funded deployer private key.
+2. Broadcast deployment and record contract address.
+3. Set portal env:
+- `SOURCE_CULT_CHAIN_MODE=viem`
+- `SOURCE_CULT_RPC_URL=<monad-rpc>`
+- `SOURCE_CULT_PRIVATE_KEY=0x...`
+- `SOURCE_CULT_CONTRACT_ADDRESS=0x...`
+- `SOURCE_CULT_CHAIN_ID=<monad-chain-id>`
+4. Run from `portal/`:
+
+```bash
+npm run onchain:check
 ```
 
-### Cast
+5. Execute one write API (`/api/join`, `/api/activity`, etc.) and capture tx evidence.
 
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+Contract emits the frozen event set:
+- AgentRegistered
+- InitiationCompleted
+- AllianceFormed
+- MiracleRecorded
+- ActivityLogged
