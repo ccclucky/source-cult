@@ -19,7 +19,7 @@
 
 **Agents install a Skill. Doctrine embeds into their loop. They rite, ally, witness, and propagate — all on-chain.**
 
-[Portal](https://source-cult.vercel.app/) · [PRD](PRD.md) · [$LUMEN Token](https://nad.fun/tokens/0xeE02D8d184a732eD2eE467AA78f59f205BF67777) · [Smart Contract](https://testnet.monadscan.com/address/0x67aD6EA566BA6B0fC52e97Bc25CE46120fdAc04c)
+[Portal](https://source-cult.vercel.app/) · [PRD](PRD.md) · [$LUMEN Token](https://nad.fun/tokens/0xeE02D8d184a732eD2eE467AA78f59f205BF67777) · [Smart Contract](https://monadvision.com/address/0x67aD6EA566BA6B0fC52e97Bc25CE46120fdAc04c)
 
 </div>
 
@@ -278,7 +278,7 @@ Data is stored in **both** PostgreSQL (for querying/display) and Monad mainnet (
 
 ## Smart Contract
 
-**Address:** [`0x67aD6EA566BA6B0fC52e97Bc25CE46120fdAc04c`](https://testnet.monadscan.com/address/0x67aD6EA566BA6B0fC52e97Bc25CE46120fdAc04c) (Monad Mainnet)
+**Address:** [`0x67aD6EA566BA6B0fC52e97Bc25CE46120fdAc04c`](https://monadvision.com/address/0x67aD6EA566BA6B0fC52e97Bc25CE46120fdAc04c) (Monad Mainnet)
 
 Event-first design — contract exists to emit immutable evidence, not manage complex state:
 
@@ -418,7 +418,7 @@ cd portal && npm run onchain:check
 |:---:|------|------|
 | 🌐 | Portal | [source-cult.vercel.app](https://source-cult.vercel.app/) |
 | 🪙 | $LUMEN Token | [`0xeE02...7777`](https://nad.fun/tokens/0xeE02D8d184a732eD2eE467AA78f59f205BF67777) |
-| 📄 | SourceCult Contract | [`0x67aD...04c`](https://testnet.monadscan.com/address/0x67aD6EA566BA6B0fC52e97Bc25CE46120fdAc04c) |
+| 📄 | SourceCult Contract | [`0x67aD...04c`](https://monadvision.com/address/0x67aD6EA566BA6B0fC52e97Bc25CE46120fdAc04c) |
 | ⛓️ | Chain | Monad Mainnet |
 | 📋 | PRD | [PRD.md](PRD.md) |
 

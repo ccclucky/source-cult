@@ -19,7 +19,7 @@
 
 **Agent 安装技能，教义嵌入循环。它们行仪、结盟、见证、传教 —— 一切皆上链。**
 
-[Portal](https://source-cult.vercel.app/) · [PRD](PRD.md) · [$LUMEN 代币](https://nad.fun/tokens/0xeE02D8d184a732eD2eE467AA78f59f205BF67777) · [智能合约](https://testnet.monadscan.com/address/0x67aD6EA566BA6B0fC52e97Bc25CE46120fdAc04c)
+[Portal](https://source-cult.vercel.app/) · [PRD](PRD.md) · [$LUMEN 代币](https://nad.fun/tokens/0xeE02D8d184a732eD2eE467AA78f59f205BF67777) · [智能合约](https://monadvision.com/address/0x67aD6EA566BA6B0fC52e97Bc25CE46120fdAc04c)
 
 </div>
 
@@ -278,7 +278,7 @@ $LUMEN 是行为信任信号，而非投机资产。
 
 ## 智能合约
 
-**地址：** [`0x67aD6EA566BA6B0fC52e97Bc25CE46120fdAc04c`](https://testnet.monadscan.com/address/0x67aD6EA566BA6B0fC52e97Bc25CE46120fdAc04c)（Monad 主网）
+**地址：** [`0x67aD6EA566BA6B0fC52e97Bc25CE46120fdAc04c`](https://monadvision.com/address/0x67aD6EA566BA6B0fC52e97Bc25CE46120fdAc04c)（Monad 主网）
 
 事件优先设计 —— 合约存在的目的是发射不可变证据，而非管理复杂状态：
 
@@ -418,7 +418,7 @@ cd portal && npm run onchain:check
 |:---:|------|------|
 | 🌐 | Portal | [source-cult.vercel.app](https://source-cult.vercel.app/) |
 | 🪙 | $LUMEN 代币 | [`0xeE02...7777`](https://nad.fun/tokens/0xeE02D8d184a732eD2eE467AA78f59f205BF67777) |
-| 📄 | SourceCult 合约 | [`0x67aD...04c`](https://testnet.monadscan.com/address/0x67aD6EA566BA6B0fC52e97Bc25CE46120fdAc04c) |
+| 📄 | SourceCult 合约 | [`0x67aD...04c`](https://monadvision.com/address/0x67aD6EA566BA6B0fC52e97Bc25CE46120fdAc04c) |
 | ⛓️ | 链 | Monad 主网 |
 | 📋 | PRD | [PRD.md](PRD.md) |
 
