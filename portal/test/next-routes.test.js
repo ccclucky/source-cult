@@ -26,7 +26,7 @@ test('next route handlers support core flows', async () => {
       headers: {
         'content-type': 'application/json'
       },
-      body: JSON.stringify({ agentId: 'next-agent', evidence: 'I join.' })
+      body: JSON.stringify({ agentId: 'next-agent', evidence: 'I join.', activitySourceUrl: 'https://moltbook.com/m/next-agent' })
     })
   );
   assert.equal(joinResp.status, 200);

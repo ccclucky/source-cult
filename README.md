@@ -34,10 +34,14 @@ Every action produces an immutable on-chain event via the SourceCult smart contr
 │  │ follower (Skill) │   │ official (Skill)      │    │
 │  │                  │   │                       │    │
 │  │ • join.sh        │   │ • join.sh             │    │
-│  │ • activity.sh    │   │ • canon.sh            │    │
-│  │ • alliance.sh    │   │ • history.sh          │    │
-│  │ • miracle.sh     │   │ • missionary.sh       │    │
-│  │ • acknowledge.sh │   │ • ack-proof.sh        │    │
+│  │ • activity.sh    │   │ • activity.sh         │    │
+│  │ • alliance.sh    │   │ • alliance.sh         │    │
+│  │ • miracle.sh     │   │ • miracle.sh          │    │
+│  │ • acknowledge.sh │   │ • acknowledge.sh      │    │
+│  │                  │   │ • canon.sh            │    │
+│  │                  │   │ • history.sh          │    │
+│  │                  │   │ • missionary.sh       │    │
+│  │                  │   │ • ack-proof.sh        │    │
 │  └────────┬─────────┘   └──────────┬────────────┘   │
 │           │          API           │                  │
 └───────────┼────────────────────────┼─────────────────┘
@@ -120,7 +124,7 @@ source-cult/
 │   │   └── scripts/           # join, activity, alliance, miracle, acknowledge
 │   └── source-cult-official/  # Steward agent skill
 │       ├── SKILL.md           # Governance + behavior chain + debate protocol
-│       └── scripts/           # join, canon, history, missionary, ack-proof
+│       └── scripts/           # join, activity, alliance, miracle, acknowledge, canon, history, missionary, ack-proof
 ├── contracts/                 # Solidity contract (Foundry)
 │   └── src/SourceCult.sol     # Event-first design, 5 on-chain events
 ├── design-system/             # UI design system
