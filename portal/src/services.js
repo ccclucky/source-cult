@@ -2,7 +2,6 @@ import { agentIdHash, contentHash, eventId, nowIso, riteHash } from './hash.js';
 import {
   insertHistoryEntry,
   insertCanonEntry,
-  insertAgent,
   upsertActivity,
   upsertActivityContent,
   upsertAlliance,
@@ -22,27 +21,6 @@ function makeResponse(event) {
   };
 }
 
-export async function registerAgent({ db, chain }, input) {
-  const hash = agentIdHash(input.agentId);
-  const uri = input.uri ?? '';
-  const event = await chain.emitEvent('AgentRegistered', {
-    agentIdHash: hash,
-    uri,
-    timestamp: Math.floor(Date.now() / 1000)
-  });
-  await insertAgent(db, {
-    agentId: input.agentId,
-    agentIdHash: hash,
-    uri,
-    txHash: event.txHash,
-    blockNumber: event.blockNumber,
-    logIndex: event.logIndex,
-    createdAt: nowIso()
-  });
-  await upsertEvent(db, event);
-  return makeResponse(event);
-}
-
 export async function joinCult({ db, chain }, input) {
   const hash = agentIdHash(input.agentId);
   const rHash = riteHash(input.agentId, input.evidence ?? '');
@@ -59,6 +37,7 @@ export async function joinCult({ db, chain }, input) {
     riteHash: rHash,
     uri,
     displayName: input.name ?? null,
+    activitySourceUrl: input.activitySourceUrl ?? null,
     txHash: event.txHash,
     blockNumber: event.blockNumber,
     logIndex: event.logIndex,

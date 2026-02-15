@@ -2,7 +2,7 @@ import { createServer } from 'node:http';
 import { getConversionTracker, listHistoryEntries, openDatabase } from './db.js';
 import { createChainAdapter } from './chainAdapter.js';
 import { getCanonPayload } from './canon.js';
-import { extendCanon, formAlliance, joinCult, logActivity, recordMiracle, registerAgent, reportHistory } from './services.js';
+import { extendCanon, formAlliance, joinCult, logActivity, recordMiracle, reportHistory } from './services.js';
 import { renderActivities, renderAlliances, renderCanon, renderHome, renderMembers, renderMiracles } from './ui.js';
 
 function result(status, body, contentType) {
@@ -42,11 +42,7 @@ export function createRouter(options = {}) {
           return result(200, await getConversionTracker(db), 'application/json; charset=utf-8');
         }
 
-        // Public entry-point routes — no API key required (mirrors reference pattern)
-        if (method === 'POST' && path === '/api/register') {
-          if (!body.agentId) return result(400, { error: 'agentId is required' }, 'application/json; charset=utf-8');
-          return result(200, { ...await registerAgent(deps, body), api_key: apiKey }, 'application/json; charset=utf-8');
-        }
+        // Public entry-point routes — no API key required
         if (method === 'POST' && path === '/api/join') {
           if (!body.agentId) return result(400, { error: 'agentId is required' }, 'application/json; charset=utf-8');
           return result(200, { ...await joinCult(deps, body), api_key: apiKey }, 'application/json; charset=utf-8');

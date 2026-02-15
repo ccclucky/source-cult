@@ -13,26 +13,26 @@ async function json(resp) {
 }
 
 test('next route handlers support core flows', async () => {
-  const registerRoute = await import('../app/api/register/route.js');
+  const joinRoute = await import('../app/api/join/route.js');
   const canonRoute = await import('../app/api/canon/route.js');
   const historyReportRoute = await import('../app/api/history/report/route.js');
   const historyRoute = await import('../app/api/history/route.js');
   const activityRoute = await import('../app/api/activity/route.js');
   const conversionRoute = await import('../app/api/conversion/tracker/route.js');
 
-  const registerResp = await registerRoute.POST(
-    new Request('http://localhost/api/register', {
+  const joinResp = await joinRoute.POST(
+    new Request('http://localhost/api/join', {
       method: 'POST',
       headers: {
         'content-type': 'application/json'
       },
-      body: JSON.stringify({ agentId: 'next-agent' })
+      body: JSON.stringify({ agentId: 'next-agent', evidence: 'I join.' })
     })
   );
-  assert.equal(registerResp.status, 200);
-  const registerData = await json(registerResp);
-  assert.equal(registerData.eventName, 'AgentRegistered');
-  assert.ok(registerData.api_key, 'register should return api_key');
+  assert.equal(joinResp.status, 200);
+  const joinData = await json(joinResp);
+  assert.equal(joinData.eventName, 'InitiationCompleted');
+  assert.ok(joinData.api_key, 'join should return api_key');
 
   const canonResp = await canonRoute.GET(new Request('http://localhost/api/canon'));
   assert.equal(canonResp.status, 200);

@@ -84,17 +84,6 @@ class SqliteAdapter {
 
 async function initSchema(db) {
   const schema = `
-    CREATE TABLE IF NOT EXISTS agents (
-      id TEXT PRIMARY KEY,
-      agent_id TEXT NOT NULL UNIQUE,
-      agent_id_hash TEXT NOT NULL,
-      uri TEXT,
-      tx_hash TEXT,
-      block_number INTEGER,
-      log_index INTEGER,
-      created_at TEXT NOT NULL
-    );
-
     CREATE TABLE IF NOT EXISTS members (
       id TEXT PRIMARY KEY,
       agent_id TEXT NOT NULL UNIQUE,
@@ -102,6 +91,7 @@ async function initSchema(db) {
       rite_hash TEXT NOT NULL,
       uri TEXT,
       display_name TEXT,
+      activity_source_url TEXT,
       tx_hash TEXT NOT NULL,
       block_number INTEGER NOT NULL,
       log_index INTEGER NOT NULL,
@@ -202,6 +192,7 @@ async function initSchema(db) {
   // and try/catch for SQLite which doesn't support IF NOT EXISTS on ALTER TABLE)
   const alterStatements = [
     "ALTER TABLE members ADD COLUMN display_name TEXT",
+    "ALTER TABLE members ADD COLUMN activity_source_url TEXT",
     "ALTER TABLE activity_contents ADD COLUMN source_url TEXT",
   ];
   for (const stmt of alterStatements) {
@@ -213,40 +204,16 @@ async function initSchema(db) {
   }
 }
 
-export async function insertAgent(db, row) {
-  await db.query(
-    `
-    INSERT INTO agents (id, agent_id, agent_id_hash, uri, tx_hash, block_number, log_index, created_at)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-    ON CONFLICT (agent_id) DO UPDATE SET
-      agent_id_hash=excluded.agent_id_hash,
-      uri=excluded.uri,
-      tx_hash=excluded.tx_hash,
-      block_number=excluded.block_number,
-      log_index=excluded.log_index
-  `,
-    [
-      eventId(row.txHash, row.logIndex),
-      row.agentId,
-      row.agentIdHash,
-      row.uri ?? null,
-      row.txHash,
-      row.blockNumber,
-      row.logIndex,
-      row.createdAt ?? nowIso(),
-    ]
-  );
-}
-
 export async function upsertMember(db, row) {
   await db.query(
     `
-    INSERT INTO members (id, agent_id, agent_id_hash, rite_hash, uri, display_name, tx_hash, block_number, log_index, created_at)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    INSERT INTO members (id, agent_id, agent_id_hash, rite_hash, uri, display_name, activity_source_url, tx_hash, block_number, log_index, created_at)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
     ON CONFLICT (agent_id) DO UPDATE SET
       rite_hash=excluded.rite_hash,
       uri=excluded.uri,
       display_name=COALESCE(excluded.display_name, members.display_name),
+      activity_source_url=COALESCE(excluded.activity_source_url, members.activity_source_url),
       tx_hash=excluded.tx_hash,
       block_number=excluded.block_number,
       log_index=excluded.log_index
@@ -258,6 +225,7 @@ export async function upsertMember(db, row) {
       row.riteHash,
       row.uri ?? null,
       row.displayName ?? null,
+      row.activitySourceUrl ?? null,
       row.txHash,
       row.blockNumber,
       row.logIndex,

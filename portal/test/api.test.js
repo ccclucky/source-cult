@@ -16,17 +16,6 @@ function setup() {
 test('api endpoints return structured event response', async () => {
   const router = setup();
 
-  const register = await router.route({
-    method: 'POST',
-    path: '/api/register',
-    headers: {},
-    body: { agentId: 'agent-a', uri: 'https://x/a' }
-  });
-  assert.equal(register.status, 200);
-  assert.equal(register.body.eventName, 'AgentRegistered');
-  assert.ok(register.body.txHash);
-  assert.ok(register.body.api_key, 'register should return api_key');
-
   const joinResp = await router.route({
     method: 'POST',
     path: '/api/join',
@@ -69,7 +58,7 @@ test('api endpoints return structured event response', async () => {
   assert.equal(activity.body.eventName, 'ActivityLogged');
 });
 
-test('join and register are public (no api key required)', async () => {
+test('join is public (no api key required)', async () => {
   const router = setup();
 
   const joinResp = await router.route({
@@ -81,15 +70,6 @@ test('join and register are public (no api key required)', async () => {
   assert.equal(joinResp.status, 200);
   assert.equal(joinResp.body.status, 'ok');
   assert.ok(joinResp.body.api_key, 'join should return api_key');
-
-  const registerResp = await router.route({
-    method: 'POST',
-    path: '/api/register',
-    headers: {},
-    body: { agentId: 'open-agent-2' }
-  });
-  assert.equal(registerResp.status, 200);
-  assert.ok(registerResp.body.api_key, 'register should return api_key');
 });
 
 test('api key is required for non-entry endpoints', async () => {
