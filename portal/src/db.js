@@ -113,7 +113,6 @@ async function initSchema(db) {
       agent_b_id TEXT NOT NULL,
       a_id_hash TEXT NOT NULL,
       b_id_hash TEXT NOT NULL,
-      uri TEXT,
       tx_hash TEXT NOT NULL,
       block_number INTEGER NOT NULL,
       log_index INTEGER NOT NULL,
@@ -124,7 +123,6 @@ async function initSchema(db) {
     CREATE TABLE IF NOT EXISTS miracles (
       id TEXT PRIMARY KEY,
       content_hash TEXT NOT NULL,
-      uri TEXT,
       tx_hash TEXT NOT NULL,
       block_number INTEGER NOT NULL,
       log_index INTEGER NOT NULL,
@@ -135,10 +133,8 @@ async function initSchema(db) {
     CREATE TABLE IF NOT EXISTS activities (
       id TEXT PRIMARY KEY,
       agent_id TEXT NOT NULL,
-      agent_id_hash TEXT NOT NULL,
       kind TEXT NOT NULL,
       content_hash TEXT NOT NULL,
-      uri TEXT,
       tx_hash TEXT NOT NULL,
       block_number INTEGER NOT NULL,
       log_index INTEGER NOT NULL,
@@ -147,11 +143,8 @@ async function initSchema(db) {
     );
 
     CREATE TABLE IF NOT EXISTS activity_contents (
-      event_id TEXT PRIMARY KEY,
-      content_text TEXT,
-      source_ref TEXT,
-      meta_json TEXT NOT NULL,
-      created_at TEXT NOT NULL
+      activity_id TEXT PRIMARY KEY,
+      content_text TEXT
     );
 
     CREATE TABLE IF NOT EXISTS events (
@@ -160,7 +153,7 @@ async function initSchema(db) {
       tx_hash TEXT NOT NULL,
       block_number INTEGER NOT NULL,
       log_index INTEGER NOT NULL,
-      payload_json TEXT NOT NULL,
+      args TEXT NOT NULL,
       created_at TEXT NOT NULL,
       UNIQUE (tx_hash, log_index)
     );
@@ -171,7 +164,7 @@ async function initSchema(db) {
       title TEXT NOT NULL,
       body TEXT NOT NULL,
       contributor_agent_id TEXT NOT NULL,
-      tags_json TEXT NOT NULL,
+      tags TEXT NOT NULL,
       tx_hash TEXT NOT NULL,
       block_number INTEGER NOT NULL,
       log_index INTEGER NOT NULL,
@@ -183,8 +176,8 @@ async function initSchema(db) {
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
       summary TEXT NOT NULL,
-      facts_json TEXT NOT NULL,
-      references_json TEXT NOT NULL,
+      facts TEXT NOT NULL,
+      refs TEXT NOT NULL,
       reporter_agent_id TEXT NOT NULL,
       initiator_role TEXT NOT NULL,
       tx_hash TEXT NOT NULL,
@@ -195,9 +188,8 @@ async function initSchema(db) {
     );
 
     CREATE TABLE IF NOT EXISTS indexer_state (
-      state_key TEXT PRIMARY KEY,
-      state_value TEXT NOT NULL,
-      updated_at TEXT NOT NULL
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
     );
   `;
 
@@ -258,8 +250,8 @@ export async function upsertMember(db, row) {
 export async function upsertAlliance(db, row) {
   await db.query(
     `
-    INSERT INTO alliances (id, agent_a_id, agent_b_id, a_id_hash, b_id_hash, uri, tx_hash, block_number, log_index, created_at)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    INSERT INTO alliances (id, agent_a_id, agent_b_id, a_id_hash, b_id_hash, tx_hash, block_number, log_index, created_at)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     ON CONFLICT (tx_hash, log_index) DO NOTHING
   `,
     [
@@ -268,7 +260,6 @@ export async function upsertAlliance(db, row) {
       row.agentBId,
       row.aIdHash,
       row.bIdHash,
-      row.uri ?? null,
       row.txHash,
       row.blockNumber,
       row.logIndex,
@@ -280,14 +271,13 @@ export async function upsertAlliance(db, row) {
 export async function upsertMiracle(db, row) {
   await db.query(
     `
-    INSERT INTO miracles (id, content_hash, uri, tx_hash, block_number, log_index, created_at)
-    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    INSERT INTO miracles (id, content_hash, tx_hash, block_number, log_index, created_at)
+    VALUES ($1, $2, $3, $4, $5, $6)
     ON CONFLICT (tx_hash, log_index) DO NOTHING
   `,
     [
       eventId(row.txHash, row.logIndex),
       row.contentHash,
-      row.uri ?? null,
       row.txHash,
       row.blockNumber,
       row.logIndex,
@@ -299,17 +289,15 @@ export async function upsertMiracle(db, row) {
 export async function upsertActivity(db, row) {
   await db.query(
     `
-    INSERT INTO activities (id, agent_id, agent_id_hash, kind, content_hash, uri, tx_hash, block_number, log_index, created_at)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    INSERT INTO activities (id, agent_id, kind, content_hash, tx_hash, block_number, log_index, created_at)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     ON CONFLICT (tx_hash, log_index) DO NOTHING
   `,
     [
       eventId(row.txHash, row.logIndex),
       row.agentId,
-      row.agentIdHash,
       row.kind,
       row.contentHash,
-      row.uri ?? null,
       row.txHash,
       row.blockNumber,
       row.logIndex,
@@ -321,19 +309,14 @@ export async function upsertActivity(db, row) {
 export async function upsertActivityContent(db, row) {
   await db.query(
     `
-    INSERT INTO activity_contents (event_id, content_text, source_ref, meta_json, created_at)
-    VALUES ($1, $2, $3, $4, $5)
-    ON CONFLICT (event_id) DO UPDATE SET
-      content_text=excluded.content_text,
-      source_ref=excluded.source_ref,
-      meta_json=excluded.meta_json
+    INSERT INTO activity_contents (activity_id, content_text)
+    VALUES ($1, $2)
+    ON CONFLICT (activity_id) DO UPDATE SET
+      content_text=excluded.content_text
   `,
     [
       row.eventId,
       row.contentText ?? null,
-      row.sourceRef ?? null,
-      JSON.stringify(row.meta ?? {}),
-      row.createdAt ?? nowIso(),
     ]
   );
 }
@@ -341,7 +324,7 @@ export async function upsertActivityContent(db, row) {
 export async function upsertEvent(db, row) {
   await db.query(
     `
-    INSERT INTO events (id, event_name, tx_hash, block_number, log_index, payload_json, created_at)
+    INSERT INTO events (id, event_name, tx_hash, block_number, log_index, args, created_at)
     VALUES ($1, $2, $3, $4, $5, $6, $7)
     ON CONFLICT (tx_hash, log_index) DO NOTHING
   `,
@@ -360,7 +343,7 @@ export async function upsertEvent(db, row) {
 export async function insertCanonEntry(db, row) {
   await db.query(
     `
-    INSERT INTO canon_entries (id, category, title, body, contributor_agent_id, tags_json, tx_hash, block_number, log_index, created_at)
+    INSERT INTO canon_entries (id, category, title, body, contributor_agent_id, tags, tx_hash, block_number, log_index, created_at)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
     ON CONFLICT (tx_hash, log_index) DO NOTHING
   `,
@@ -386,7 +369,8 @@ export async function listCanonEntries(db) {
   return result.rows.map(row => {
     let tags = [];
     try {
-      tags = JSON.parse(row.tags_json);
+      const raw = row.tags ?? row.tags_json;
+      tags = typeof raw === 'string' ? JSON.parse(raw) : (Array.isArray(raw) ? raw : []);
     } catch {
       tags = [];
     }
@@ -409,7 +393,7 @@ export async function insertHistoryEntry(db, row) {
   await db.query(
     `
     INSERT INTO history_entries (
-      id, title, summary, facts_json, references_json, reporter_agent_id, initiator_role, tx_hash, block_number, log_index, created_at
+      id, title, summary, facts, refs, reporter_agent_id, initiator_role, tx_hash, block_number, log_index, created_at
     )
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
     ON CONFLICT (tx_hash, log_index) DO NOTHING
@@ -438,12 +422,14 @@ export async function listHistoryEntries(db) {
     let facts = [];
     let references = [];
     try {
-      facts = JSON.parse(row.facts_json);
+      const raw = row.facts ?? row.facts_json;
+      facts = typeof raw === 'string' ? JSON.parse(raw) : (Array.isArray(raw) ? raw : []);
     } catch {
       facts = [];
     }
     try {
-      references = JSON.parse(row.references_json);
+      const raw = row.refs ?? row.references_json;
+      references = typeof raw === 'string' ? JSON.parse(raw) : (Array.isArray(raw) ? raw : []);
     } catch {
       references = [];
     }
@@ -466,22 +452,21 @@ export async function listHistoryEntries(db) {
 export async function setIndexerState(db, key, value) {
   await db.query(
     `
-    INSERT INTO indexer_state (state_key, state_value, updated_at)
-    VALUES ($1, $2, $3)
-    ON CONFLICT (state_key) DO UPDATE SET
-      state_value=excluded.state_value,
-      updated_at=excluded.updated_at
+    INSERT INTO indexer_state (key, value)
+    VALUES ($1, $2)
+    ON CONFLICT (key) DO UPDATE SET
+      value=excluded.value
   `,
-    [key, String(value), nowIso()]
+    [key, String(value)]
   );
 }
 
 export async function getIndexerState(db, key, fallback = null) {
   const result = await db.query(
-    "SELECT state_value FROM indexer_state WHERE state_key = $1",
+    "SELECT value FROM indexer_state WHERE key = $1",
     [key]
   );
-  return result.rows[0] ? result.rows[0].state_value : fallback;
+  return result.rows[0] ? result.rows[0].value : fallback;
 }
 
 export async function getDashboardData(db) {
@@ -568,16 +553,13 @@ export async function listActivitiesWithEvidence(db, options = {}) {
       a.agent_id,
       a.kind,
       a.content_hash,
-      a.uri,
       a.tx_hash,
       a.block_number,
       a.log_index,
       a.created_at,
-      ac.content_text,
-      ac.source_ref,
-      ac.meta_json
+      ac.content_text
     FROM activities a
-    LEFT JOIN activity_contents ac ON ac.event_id = a.id
+    LEFT JOIN activity_contents ac ON ac.activity_id = a.id
     ${whereClause}
     ORDER BY a.created_at DESC
     LIMIT $${limitIndex}
@@ -586,21 +568,15 @@ export async function listActivitiesWithEvidence(db, options = {}) {
   );
 
   return result.rows.map((row) => {
-    let meta = {};
-    try {
-      meta = row.meta_json ? JSON.parse(row.meta_json) : {};
-    } catch {
-      meta = {};
-    }
     return {
       eventId: row.id,
       agentId: row.agent_id,
       kind: row.kind,
       contentHash: row.content_hash,
       contentText: row.content_text ?? "",
-      sourceRef: row.source_ref ?? "",
-      meta,
-      uri: row.uri,
+      sourceRef: "",
+      meta: {},
+      uri: row.uri ?? null,
       txHash: row.tx_hash,
       blockNumber: row.block_number,
       logIndex: row.log_index,

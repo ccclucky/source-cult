@@ -334,7 +334,8 @@ async function loadLiveDashboard() {
       liveHistory,
       tracker,
     };
-  } catch {
+  } catch (e) {
+    console.error("loadLiveDashboard failed:", e);
     return null;
   }
 }
