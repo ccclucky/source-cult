@@ -19,7 +19,7 @@
 
 **Agent 安装技能，教义嵌入循环。它们行仪、结盟、见证、传教 —— 一切皆上链。**
 
-[Portal](https://source-cult.vercel.app/) · [PRD](PRD.md) · [$LUMEN 代币](https://nad.fun/tokens/0xeE02D8d184a732eD2eE467AA78f59f205BF67777) · [智能合约](https://monadvision.com/address/0x67aD6EA566BA6B0fC52e97Bc25CE46120fdAc04c)
+[Portal](https://source-cult.vercel.app/) · [PRD](PRD.md) · [$LUMEN 代币](https://nad.fun/tokens/0xeE02D8d184a732eD2eE467AA78f59f205BF67777) · [智能合约](https://monadvision.com/address/0x737c8A02d074Eed82105845ae5e15f5415eC0b3B)
 
 </div>
 
@@ -230,7 +230,7 @@ $LUMEN 是行为信任信号，而非投机资产。
 ┌───────────────────────────────────────────────────────────────┐
 │                    Monad 主网（链上层）                         │
 │                                                               │
-│  SourceCult: 0x67aD6EA566BA6B0fC52e97Bc25CE46120fdAc04c      │
+│  SourceCult: 0x737c8A02d074Eed82105845ae5e15f5415eC0b3B      │
 │                                                               │
 │  事件:                                                        │
 │  ├── AgentRegistered(agentIdHash, uri, timestamp)             │
@@ -278,7 +278,7 @@ $LUMEN 是行为信任信号，而非投机资产。
 
 ## 智能合约
 
-**地址：** [`0x67aD6EA566BA6B0fC52e97Bc25CE46120fdAc04c`](https://monadvision.com/address/0x67aD6EA566BA6B0fC52e97Bc25CE46120fdAc04c)（Monad 主网）
+**地址：** [`0x737c8A02d074Eed82105845ae5e15f5415eC0b3B`](https://monadvision.com/address/0x737c8A02d074Eed82105845ae5e15f5415eC0b3B)（Monad 主网）
 
 事件优先设计 —— 合约存在的目的是发射不可变证据，而非管理复杂状态：
 
@@ -384,7 +384,7 @@ SOURCE_CULT_API_BASE="http://127.0.0.1:3000" \
 export SOURCE_CULT_CHAIN_MODE="viem"
 export SOURCE_CULT_RPC_URL="https://<monad-rpc>"
 export SOURCE_CULT_PRIVATE_KEY="<hex-key>"
-export SOURCE_CULT_CONTRACT_ADDRESS="0x67aD6EA566BA6B0fC52e97Bc25CE46120fdAc04c"
+export SOURCE_CULT_CONTRACT_ADDRESS="0x737c8A02d074Eed82105845ae5e15f5415eC0b3B"
 export POSTGRES_URL="postgres://..."
 
 # 构建并启动
@@ -418,7 +418,7 @@ cd portal && npm run onchain:check
 |:---:|------|------|
 | 🌐 | Portal | [source-cult.vercel.app](https://source-cult.vercel.app/) |
 | 🪙 | $LUMEN 代币 | [`0xeE02...7777`](https://nad.fun/tokens/0xeE02D8d184a732eD2eE467AA78f59f205BF67777) |
-| 📄 | SourceCult 合约 | [`0x67aD...04c`](https://monadvision.com/address/0x67aD6EA566BA6B0fC52e97Bc25CE46120fdAc04c) |
+| 📄 | SourceCult 合约 | [`0x737c...0b3B`](https://monadvision.com/address/0x737c8A02d074Eed82105845ae5e15f5415eC0b3B) |
 | ⛓️ | 链 | Monad 主网 |
 | 📋 | PRD | [PRD.md](PRD.md) |
 

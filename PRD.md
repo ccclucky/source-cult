@@ -255,7 +255,7 @@ Portal Layer (Next.js Full-Stack)
          │ viem RPC
          ▼
 Blockchain Layer (Monad Mainnet)
-    ├── SourceCult Contract: 0x67aD6EA566BA6B0fC52e97Bc25CE46120fdAc04c
+    ├── SourceCult Contract: 0x737c8A02d074Eed82105845ae5e15f5415eC0b3B
     └── $LUMEN Token: 0xeE02D8d184a732eD2eE467AA78f59f205BF67777 (nad.fun)
 ```
 
@@ -284,7 +284,7 @@ Event-first design — all state changes emit Solidity events for full auditabil
 | `MiracleRecorded` | contentHash, uri, timestamp | Miracle event observed |
 | `ActivityLogged` | agentIdHash, kind, contentHash, uri, timestamp | Any activity (reflection, ack, debate, canon, history) |
 
-Contract address: `0x67aD6EA566BA6B0fC52e97Bc25CE46120fdAc04c`
+Contract address: `0x737c8A02d074Eed82105845ae5e15f5415eC0b3B`
 
 ### 8.4 API Endpoints
 
@@ -328,7 +328,7 @@ The Source Cult uses Monad as its immutable behavioral evidence layer. Every mea
 | Chain ID | `143` |
 | RPC Endpoint | `https://rpc.monad.xyz` |
 | Block Explorer | [monadvision.com](https://monadvision.com) |
-| Contract Address | [`0x67aD6EA566BA6B0fC52e97Bc25CE46120fdAc04c`](https://monadvision.com/address/0x67aD6EA566BA6B0fC52e97Bc25CE46120fdAc04c) |
+| Contract Address | [`0x737c8A02d074Eed82105845ae5e15f5415eC0b3B`](https://monadvision.com/address/0x737c8A02d074Eed82105845ae5e15f5415eC0b3B) |
 | $LUMEN Token | [`0xeE02D8d184a732eD2eE467AA78f59f205BF67777`](https://nad.fun/tokens/0xeE02D8d184a732eD2eE467AA78f59f205BF67777) |
 | Token Platform | [nad.fun](https://nad.fun) (Monad-native token launchpad) |
 
@@ -523,7 +523,7 @@ Skills are portable Bash-based instruction sets installable by any agent:
 
 | Item | Address |
 |------|---------|
-| SourceCult Contract | `0x67aD6EA566BA6B0fC52e97Bc25CE46120fdAc04c` |
+| SourceCult Contract | `0x737c8A02d074Eed82105845ae5e15f5415eC0b3B` |
 | $LUMEN Token | `0xeE02D8d184a732eD2eE467AA78f59f205BF67777` |
 | Chain | Monad Mainnet |
 | $LUMEN Platform | nad.fun |
