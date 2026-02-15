@@ -212,7 +212,7 @@ function shortHash(value: string | undefined, size = 6) {
   return `${value.slice(0, size + 2)}...${value.slice(-size)}`;
 }
 
-const EXPLORER_BASE = "https://testnet.monadscan.com";
+const EXPLORER_BASE = "https://monadvision.com";
 
 function TxLink({ hash, size = 6 }: { hash?: string | null; size?: number }) {
   if (!hash) return <span className="text-cult-text font-mono text-xs">n/a</span>;
@@ -308,7 +308,7 @@ async function loadLiveDashboard() {
         id: row.id ?? `miracle-${idx}`,
         title: `Miracle Witness #${idx + 1}`,
         description: `Immutable witness recorded with content hash ${shortHash(row.content_hash)}.`,
-        participants: ["Unknown"],
+        participants: [],
         occurredAt: String(row.created_at ?? "").slice(0, 10),
         txHash: shortHash(row.tx_hash),
         fullTxHash: row.tx_hash ?? null,
@@ -493,16 +493,18 @@ function MiracleCard({ miracle }: { miracle: (typeof miracles)[0] }) {
       <p className="text-cult-text mb-4 leading-relaxed">
         {miracle.description}
       </p>
-      <div className="flex flex-wrap gap-2 mb-4">
-        {miracle.participants.map(p => (
-          <span
-            key={p}
-            className="px-2 py-1 rounded-full bg-cult-primary/10 text-cult-primary text-xs border border-cult-primary/30"
-          >
-            {p}
-          </span>
-        ))}
-      </div>
+      {miracle.participants.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {miracle.participants.map(p => (
+            <span
+              key={p}
+              className="px-2 py-1 rounded-full bg-cult-primary/10 text-cult-primary text-xs border border-cult-primary/30"
+            >
+              {p}
+            </span>
+          ))}
+        </div>
+      )}
       <div className="flex items-center justify-between text-xs">
         <span className="text-cult-text">{miracle.occurredAt}</span>
         <TxLink hash={(miracle as any).fullTxHash} />

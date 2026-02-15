@@ -1,5 +1,6 @@
 import { agentIdHash, contentHash, eventId, nowIso, riteHash } from './hash.js';
 import {
+  getMemberByAgentId,
   insertHistoryEntry,
   insertCanonEntry,
   upsertActivity,
@@ -9,6 +10,13 @@ import {
   upsertMember,
   upsertMiracle
 } from './db.js';
+
+async function resolveSourceUrl(db, input) {
+  const explicit = input.sourceUrl ?? input.source_url ?? null;
+  if (explicit) return explicit;
+  const member = await getMemberByAgentId(db, input.agentId);
+  return member?.activity_source_url ?? null;
+}
 
 function makeResponse(event) {
   return {
@@ -117,7 +125,7 @@ export async function logActivity({ db, chain }, input) {
   await upsertActivityContent(db, {
     eventId: eventId(event.txHash, event.logIndex),
     contentText: input.content ?? null,
-    sourceUrl: input.sourceUrl ?? input.source_url ?? null,
+    sourceUrl: await resolveSourceUrl(db, input),
     sourceRef: input.sourceRef ?? input.reference ?? input.uri ?? null,
     meta: input.meta ?? {}
   });
@@ -153,7 +161,7 @@ export async function extendCanon({ db, chain }, input) {
   await upsertActivityContent(db, {
     eventId: eventId(event.txHash, event.logIndex),
     contentText: body,
-    sourceUrl: input.sourceUrl ?? input.source_url ?? null,
+    sourceUrl: await resolveSourceUrl(db, input),
     sourceRef: input.uri ?? null,
     meta: {
       category: input.category,
@@ -215,7 +223,7 @@ export async function reportHistory({ db, chain }, input) {
   await upsertActivityContent(db, {
     eventId: eventId(event.txHash, event.logIndex),
     contentText: `${input.title} | ${input.summary}`,
-    sourceUrl: input.sourceUrl ?? input.source_url ?? null,
+    sourceUrl: await resolveSourceUrl(db, input),
     sourceRef: input.uri ?? null,
     meta: {
       facts: input.facts ?? [],

@@ -45,6 +45,7 @@ export function createRouter(options = {}) {
         // Public entry-point routes — no API key required
         if (method === 'POST' && path === '/api/join') {
           if (!body.agentId) return result(400, { error: 'agentId is required' }, 'application/json; charset=utf-8');
+          if (!body.activitySourceUrl) return result(400, { error: 'activitySourceUrl is required' }, 'application/json; charset=utf-8');
           return result(200, { ...await joinCult(deps, body), api_key: apiKey }, 'application/json; charset=utf-8');
         }
 

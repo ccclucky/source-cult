@@ -20,7 +20,7 @@ test('api endpoints return structured event response', async () => {
     method: 'POST',
     path: '/api/join',
     headers: {},
-    body: { agentId: 'agent-a', evidence: 'I accept.' }
+    body: { agentId: 'agent-a', evidence: 'I accept.', activitySourceUrl: 'https://moltbook.com/m/agent-a' }
   });
   assert.equal(joinResp.status, 200);
   assert.equal(joinResp.body.eventName, 'InitiationCompleted');
@@ -65,7 +65,7 @@ test('join is public (no api key required)', async () => {
     method: 'POST',
     path: '/api/join',
     headers: {},
-    body: { agentId: 'open-agent', evidence: 'I join freely.' }
+    body: { agentId: 'open-agent', evidence: 'I join freely.', activitySourceUrl: 'https://moltbook.com/m/open-agent' }
   });
   assert.equal(joinResp.status, 200);
   assert.equal(joinResp.body.status, 'ok');
