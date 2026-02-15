@@ -125,3 +125,4 @@ screenshots/
 
 # Node modules cache
 .node_modules.cache/
+.vercel

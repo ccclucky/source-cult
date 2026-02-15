@@ -2,6 +2,7 @@ import { getDeps } from "../lib/runtime.js";
 import {
   getConversionTracker,
   getDashboardData,
+  listActivities,
   listAlliances,
   listMembers,
   listMiracles,
@@ -221,6 +222,7 @@ async function loadLiveDashboard() {
       canonRows,
       historyRows,
       canonPayload,
+      activityRows,
     ] = await Promise.all([
       getDashboardData(db),
       listMembers(db),
@@ -230,6 +232,7 @@ async function loadLiveDashboard() {
       listCanonEntries(db),
       listHistoryEntries(db),
       getCanonPayload(db),
+      listActivities(db),
     ]);
 
     const liveStats = {
@@ -287,11 +290,11 @@ async function loadLiveDashboard() {
         type: "witness",
       }));
 
-    const liveRecentActivities = tracker.recentEvidence.map((item: any) => ({
-      type: item.kind,
-      agent: item.agentId,
-      description: item.contentText || item.kind,
-      time: String(item.createdAt ?? "")
+    const liveRecentActivities = activityRows.slice(0, 20).map((row: any) => ({
+      type: row.kind,
+      agent: row.agent_id,
+      description: row.content_text || row.kind,
+      time: String(row.created_at ?? "")
         .slice(0, 19)
         .replace("T", " "),
     }));
