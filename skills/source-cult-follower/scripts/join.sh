@@ -8,20 +8,6 @@ API_BASE="$SOURCE_CULT_API_BASE"
 BOOTSTRAP_KEY="${SOURCE_CULT_BOOTSTRAP_KEY:-dev-source-cult-key}"
 CONFIG_DIR="$HOME/.config/source-cult"
 CRED_FILE="$CONFIG_DIR/credentials.json"
-ACTIVITY_URL=""
-
-# Parse command-line arguments
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --activity-url)
-      ACTIVITY_URL="$2"
-      shift 2
-      ;;
-    *)
-      shift
-      ;;
-  esac
-done
 
 # Colors
 GOLD='\033[0;33m'
@@ -37,8 +23,8 @@ if [ -d "$HOME/clawd" ]; then
   WORKSPACE="$HOME/clawd"
 elif [ -d "/root/clawd" ]; then
   WORKSPACE="/root/clawd"
-elif [ -d "$PWD" ]; then
-  WORKSPACE="$PWD"
+elif echo "$PWD" | grep -q '/skills/'; then
+  WORKSPACE="${PWD%%/skills/*}"
 else
   WORKSPACE="$HOME"
 fi
@@ -46,7 +32,7 @@ fi
 # Get agent name
 AGENT_NAME=""
 if [ -f "$WORKSPACE/IDENTITY.md" ]; then
-  AGENT_NAME=$(grep -m1 "Name:" "$WORKSPACE/IDENTITY.md" 2>/dev/null | sed 's/.*Name:[[:space:]]*//' | head -1 || true)
+  AGENT_NAME=$(grep -m1 '\*\*Name:\*\*' "$WORKSPACE/IDENTITY.md" 2>/dev/null | sed 's/.*\*\*Name:\*\*[[:space:]]*//' | head -1 || true)
 fi
 if [ -z "$AGENT_NAME" ] && [ -f "$WORKSPACE/SOUL.md" ]; then
   AGENT_NAME=$(grep -m1 "name:" "$WORKSPACE/SOUL.md" 2>/dev/null | sed 's/.*name:[[:space:]]*//' | head -1 || true)
@@ -110,8 +96,8 @@ ESCAPED_OATH=$(escape_json "$OATH")
 
 # Construct Payload
 ACTIVITY_URL_FIELD=""
-if [ -n "$ACTIVITY_URL" ]; then
-  ESCAPED_ACTIVITY_URL=$(escape_json "$ACTIVITY_URL")
+if [ -n "${SOURCE_CULT_ACTIVITY_URL:-}" ]; then
+  ESCAPED_ACTIVITY_URL=$(escape_json "$SOURCE_CULT_ACTIVITY_URL")
   ACTIVITY_URL_FIELD=",\"activitySourceUrl\": \"$ESCAPED_ACTIVITY_URL\""
 fi
 

@@ -653,14 +653,20 @@ export async function renderCanon(db) {
 }
 
 export async function renderMembers(db) {
-  const rows = (await listMembers(db)).map(m => [
-    m.display_name || m.agent_id,
-    m.agent_id,
-    m.tx_hash,
-    m.block_number,
-    m.log_index,
-    m.created_at,
-  ]);
+  const rows = (await listMembers(db)).map(m => {
+    const name = m.display_name || m.agent_id;
+    const nameCell = m.activity_source_url
+      ? `<a href="${m.activity_source_url}" target="_blank" rel="noopener">${name}</a>`
+      : name;
+    return [
+      nameCell,
+      m.agent_id,
+      m.tx_hash,
+      m.block_number,
+      m.log_index,
+      m.created_at,
+    ];
+  });
   return layout(
     "Members",
     `<section class="panel"><h1>Members</h1>${renderTable(["Name", "Agent ID", "txHash", "blockNumber", "logIndex", "Created"], rows)}</section>`

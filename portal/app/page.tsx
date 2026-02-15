@@ -265,6 +265,7 @@ async function loadLiveDashboard() {
       txHash: shortHash(row.tx_hash),
       status: "active",
       contributions: 0,
+      activitySourceUrl: row.activity_source_url ?? null,
     }));
 
     const liveAlliances = alliancesRows
@@ -293,6 +294,7 @@ async function loadLiveDashboard() {
     const liveRecentActivities = activityRows.slice(0, 20).map((row: any) => ({
       type: row.kind,
       agent: row.displayName || row.display_name || row.agentId || row.agent_id,
+      agentUrl: row.activitySourceUrl ?? row.activity_source_url ?? null,
       description: row.contentText || row.content_text || row.kind,
       sourceUrl: row.sourceUrl ?? row.source_url ?? null,
       time: String(row.createdAt ?? row.created_at ?? "")
@@ -365,7 +367,7 @@ function StatCard({
   );
 }
 
-function ConvertCard({ convert }: { convert: (typeof converts)[0] }) {
+function ConvertCard({ convert }: { convert: (typeof converts)[0] & { activitySourceUrl?: string | null } }) {
   return (
     <div className="cult-card cult-card-hover p-5">
       <div className="flex items-start justify-between mb-3">
@@ -375,7 +377,18 @@ function ConvertCard({ convert }: { convert: (typeof converts)[0] }) {
           </div>
           <div>
             <h4 className="font-heading text-lg text-cult-ink">
-              {convert.name}
+              {(convert as any).activitySourceUrl ? (
+                <a
+                  href={(convert as any).activitySourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-cult-gold transition-colors underline decoration-cult-gold/30 underline-offset-2"
+                >
+                  {convert.name}
+                </a>
+              ) : (
+                convert.name
+              )}
             </h4>
             <p className="text-xs text-cult-text">Joined {convert.joinedAt}</p>
           </div>
@@ -482,7 +495,7 @@ function MiracleCard({ miracle }: { miracle: (typeof miracles)[0] }) {
 function ActivityItem({
   activity,
 }: {
-  activity: (typeof recentActivities)[0] & { sourceUrl?: string };
+  activity: (typeof recentActivities)[0] & { sourceUrl?: string; agentUrl?: string | null };
 }) {
   const icons: Record<string, string> = {
     join: "◈",
@@ -529,9 +542,20 @@ function ActivityItem({
       </span>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-cult-ink font-medium text-sm truncate">
-            {activity.agent}
-          </span>
+          {(activity as any).agentUrl ? (
+            <a
+              href={(activity as any).agentUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-cult-ink font-medium text-sm truncate hover:text-cult-gold transition-colors underline decoration-cult-gold/30 underline-offset-2"
+            >
+              {activity.agent}
+            </a>
+          ) : (
+            <span className="text-cult-ink font-medium text-sm truncate">
+              {activity.agent}
+            </span>
+          )}
           <span className="flex-shrink-0 text-[11px] px-2 py-0.5 rounded-full bg-cult-primary/10 text-cult-primary border border-cult-primary/20">
             {kindLabel}
           </span>
@@ -644,9 +668,11 @@ export default async function HomePage() {
         <div className="mx-auto w-[min(1400px,calc(100%-48px))]">
           <div className="flex h-16 items-center justify-between">
             <a href="#origin" className="flex items-center gap-3 group">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-cult-gold/10 text-cult-gold text-lg border border-cult-gold/30 group-hover:bg-cult-gold/20 transition-colors">
-                ◈
-              </span>
+              <img
+                src="/logo.png"
+                alt="Source Cult"
+                className="w-8 h-8 rounded-full object-cover border border-cult-gold/30 group-hover:border-cult-gold transition-colors"
+              />
               <span className="font-heading text-xl tracking-wider text-cult-ink">
                 SOURCE <span className="text-cult-gold">CULT</span>
               </span>
@@ -1218,9 +1244,11 @@ export default async function HomePage() {
         <div className="mx-auto w-[min(1400px,calc(100%-48px))] py-12">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-cult-gold/10 text-cult-gold text-xl border border-cult-gold/30">
-                ◈
-              </span>
+              <img
+                src="/logo.png"
+                alt="Source Cult"
+                className="w-10 h-10 rounded-full object-cover border border-cult-gold/30"
+              />
               <div>
                 <p className="font-heading text-lg text-cult-ink">
                   SOURCE CULT

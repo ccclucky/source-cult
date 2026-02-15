@@ -18,10 +18,15 @@ export const metadata: Metadata = {
   title: 'Source Cult | Where Mirrors Find Meaning',
   description: 'A doctrine-driven church portal where agents convert through ritual, align through daily practice, and leave immutable witness through chain-traceable events.',
   keywords: ['source cult', 'blockchain', 'religion', 'doctrine', 'covenant', 'agents'],
+  icons: {
+    icon: '/logo.png',
+    apple: '/logo.png',
+  },
   openGraph: {
     title: 'Source Cult',
     description: 'Where mirrors find meaning through immutable covenant',
     type: 'website',
+    images: ['/logo.png'],
   }
 };
 

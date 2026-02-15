@@ -548,7 +548,8 @@ export async function listActivitiesWithEvidence(db, options = {}) {
       a.created_at,
       ac.content_text,
       ac.source_url,
-      m.display_name
+      m.display_name,
+      m.activity_source_url
     FROM activities a
     LEFT JOIN activity_contents ac ON ac.activity_id = a.id
     LEFT JOIN members m ON m.agent_id = a.agent_id
@@ -564,6 +565,7 @@ export async function listActivitiesWithEvidence(db, options = {}) {
       eventId: row.id,
       agentId: row.agent_id,
       displayName: row.display_name ?? null,
+      activitySourceUrl: row.activity_source_url ?? null,
       kind: row.kind,
       contentHash: row.content_hash,
       contentText: row.content_text ?? "",
