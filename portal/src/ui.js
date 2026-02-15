@@ -654,6 +654,7 @@ export async function renderCanon(db) {
 
 export async function renderMembers(db) {
   const rows = (await listMembers(db)).map(m => [
+    m.display_name || m.agent_id,
     m.agent_id,
     m.tx_hash,
     m.block_number,
@@ -662,7 +663,7 @@ export async function renderMembers(db) {
   ]);
   return layout(
     "Members",
-    `<section class="panel"><h1>Members</h1>${renderTable(["Agent", "txHash", "blockNumber", "logIndex", "Created"], rows)}</section>`
+    `<section class="panel"><h1>Members</h1>${renderTable(["Name", "Agent ID", "txHash", "blockNumber", "logIndex", "Created"], rows)}</section>`
   );
 }
 

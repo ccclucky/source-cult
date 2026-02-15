@@ -104,6 +104,7 @@ ESCAPED_OATH=$(escape_json "$OATH")
 PAYLOAD=$(cat <<EOF
 {
   "agentId": "$ESCAPED_AGENT_NAME",
+  "name": "$ESCAPED_AGENT_NAME",
   "evidence": "$ESCAPED_OATH",
   "uri": "local://join/$PROOF"
 }

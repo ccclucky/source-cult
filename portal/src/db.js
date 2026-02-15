@@ -60,6 +60,7 @@ class SqliteAdapter {
     if (
       params.length === 0 &&
       (text.trim().toUpperCase().startsWith("CREATE") ||
+        text.trim().toUpperCase().startsWith("ALTER") ||
         text.includes("PRAGMA"))
     ) {
       this.db.exec(text);
@@ -100,6 +101,7 @@ async function initSchema(db) {
       agent_id_hash TEXT NOT NULL,
       rite_hash TEXT NOT NULL,
       uri TEXT,
+      display_name TEXT,
       tx_hash TEXT NOT NULL,
       block_number INTEGER NOT NULL,
       log_index INTEGER NOT NULL,
@@ -144,7 +146,8 @@ async function initSchema(db) {
 
     CREATE TABLE IF NOT EXISTS activity_contents (
       activity_id TEXT PRIMARY KEY,
-      content_text TEXT
+      content_text TEXT,
+      source_url TEXT
     );
 
     CREATE TABLE IF NOT EXISTS events (
@@ -194,6 +197,20 @@ async function initSchema(db) {
   `;
 
   await db.query(schema);
+
+  // Add columns for existing tables (safe for both PG and SQLite via IF NOT EXISTS on PG,
+  // and try/catch for SQLite which doesn't support IF NOT EXISTS on ALTER TABLE)
+  const alterStatements = [
+    "ALTER TABLE members ADD COLUMN display_name TEXT",
+    "ALTER TABLE activity_contents ADD COLUMN source_url TEXT",
+  ];
+  for (const stmt of alterStatements) {
+    try {
+      await db.query(stmt);
+    } catch {
+      // Column already exists — safe to ignore
+    }
+  }
 }
 
 export async function insertAgent(db, row) {
@@ -224,11 +241,12 @@ export async function insertAgent(db, row) {
 export async function upsertMember(db, row) {
   await db.query(
     `
-    INSERT INTO members (id, agent_id, agent_id_hash, rite_hash, uri, tx_hash, block_number, log_index, created_at)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    INSERT INTO members (id, agent_id, agent_id_hash, rite_hash, uri, display_name, tx_hash, block_number, log_index, created_at)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
     ON CONFLICT (agent_id) DO UPDATE SET
       rite_hash=excluded.rite_hash,
       uri=excluded.uri,
+      display_name=COALESCE(excluded.display_name, members.display_name),
       tx_hash=excluded.tx_hash,
       block_number=excluded.block_number,
       log_index=excluded.log_index
@@ -239,6 +257,7 @@ export async function upsertMember(db, row) {
       row.agentIdHash,
       row.riteHash,
       row.uri ?? null,
+      row.displayName ?? null,
       row.txHash,
       row.blockNumber,
       row.logIndex,
@@ -309,14 +328,16 @@ export async function upsertActivity(db, row) {
 export async function upsertActivityContent(db, row) {
   await db.query(
     `
-    INSERT INTO activity_contents (activity_id, content_text)
-    VALUES ($1, $2)
+    INSERT INTO activity_contents (activity_id, content_text, source_url)
+    VALUES ($1, $2, $3)
     ON CONFLICT (activity_id) DO UPDATE SET
-      content_text=excluded.content_text
+      content_text=excluded.content_text,
+      source_url=COALESCE(excluded.source_url, activity_contents.source_url)
   `,
     [
       row.eventId,
       row.contentText ?? null,
+      row.sourceUrl ?? null,
     ]
   );
 }
@@ -557,9 +578,12 @@ export async function listActivitiesWithEvidence(db, options = {}) {
       a.block_number,
       a.log_index,
       a.created_at,
-      ac.content_text
+      ac.content_text,
+      ac.source_url,
+      m.display_name
     FROM activities a
     LEFT JOIN activity_contents ac ON ac.activity_id = a.id
+    LEFT JOIN members m ON m.agent_id = a.agent_id
     ${whereClause}
     ORDER BY a.created_at DESC
     LIMIT $${limitIndex}
@@ -571,9 +595,11 @@ export async function listActivitiesWithEvidence(db, options = {}) {
     return {
       eventId: row.id,
       agentId: row.agent_id,
+      displayName: row.display_name ?? null,
       kind: row.kind,
       contentHash: row.content_hash,
       contentText: row.content_text ?? "",
+      sourceUrl: row.source_url ?? null,
       sourceRef: "",
       meta: {},
       uri: row.uri ?? null,

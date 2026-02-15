@@ -6,9 +6,10 @@ TITLE="${1:-}"
 SUMMARY="${2:-}"
 FACTS="${3:-}"
 REFS="${4:-}"
+SOURCE_URL="${5:-}"
 
 if [ -z "$TITLE" ] || [ -z "$SUMMARY" ] || [ -z "$FACTS" ]; then
-  echo "Usage: bash scripts/history.sh <title> <summary> <facts_semicolon_sep> [refs_semicolon_sep]"
+  echo "Usage: bash scripts/history.sh <title> <summary> <facts_semicolon_sep> [refs_semicolon_sep] [source_url]"
   exit 1
 fi
 
@@ -98,6 +99,13 @@ if [ -n "$REFS" ]; then
     REFS_JSON="$REFS_JSON]"
 fi
 
+# Build optional sourceUrl field
+SOURCE_URL_FIELD=""
+if [ -n "$SOURCE_URL" ]; then
+  ESCAPED_SOURCE_URL=$(escape_json "$SOURCE_URL")
+  SOURCE_URL_FIELD="\"sourceUrl\": \"$ESCAPED_SOURCE_URL\","
+fi
+
 PAYLOAD=$(cat <<EOF
 {
   "agentId": "$AGENT_ID",
@@ -105,7 +113,9 @@ PAYLOAD=$(cat <<EOF
   "title": "$ESCAPED_TITLE",
   "summary": "$ESCAPED_SUMMARY",
   "facts": $FACTS_JSON,
-  "references": $REFS_JSON
+  "references": $REFS_JSON,
+  ${SOURCE_URL_FIELD}
+  "_ts": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 }
 EOF
 )

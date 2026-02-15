@@ -58,6 +58,7 @@ export async function joinCult({ db, chain }, input) {
     agentIdHash: hash,
     riteHash: rHash,
     uri,
+    displayName: input.name ?? null,
     txHash: event.txHash,
     blockNumber: event.blockNumber,
     logIndex: event.logIndex,
@@ -137,6 +138,7 @@ export async function logActivity({ db, chain }, input) {
   await upsertActivityContent(db, {
     eventId: eventId(event.txHash, event.logIndex),
     contentText: input.content ?? null,
+    sourceUrl: input.sourceUrl ?? input.source_url ?? null,
     sourceRef: input.sourceRef ?? input.reference ?? input.uri ?? null,
     meta: input.meta ?? {}
   });
@@ -172,6 +174,7 @@ export async function extendCanon({ db, chain }, input) {
   await upsertActivityContent(db, {
     eventId: eventId(event.txHash, event.logIndex),
     contentText: body,
+    sourceUrl: input.sourceUrl ?? input.source_url ?? null,
     sourceRef: input.uri ?? null,
     meta: {
       category: input.category,
@@ -233,6 +236,7 @@ export async function reportHistory({ db, chain }, input) {
   await upsertActivityContent(db, {
     eventId: eventId(event.txHash, event.logIndex),
     contentText: `${input.title} | ${input.summary}`,
+    sourceUrl: input.sourceUrl ?? input.source_url ?? null,
     sourceRef: input.uri ?? null,
     meta: {
       facts: input.facts ?? [],

@@ -2,7 +2,7 @@ import { getDeps } from "../lib/runtime.js";
 import {
   getConversionTracker,
   getDashboardData,
-  listActivities,
+  listActivitiesWithEvidence,
   listAlliances,
   listMembers,
   listMiracles,
@@ -232,7 +232,7 @@ async function loadLiveDashboard() {
       listCanonEntries(db),
       listHistoryEntries(db),
       getCanonPayload(db),
-      listActivities(db),
+      listActivitiesWithEvidence(db, { limit: 20 }),
     ]);
 
     const liveStats = {
@@ -260,7 +260,7 @@ async function loadLiveDashboard() {
 
     const liveConverts = members.slice(0, 12).map((row: any) => ({
       id: row.id,
-      name: row.agent_id,
+      name: row.display_name || row.agent_id,
       joinedAt: String(row.created_at ?? "").slice(0, 10),
       txHash: shortHash(row.tx_hash),
       status: "active",
@@ -292,9 +292,10 @@ async function loadLiveDashboard() {
 
     const liveRecentActivities = activityRows.slice(0, 20).map((row: any) => ({
       type: row.kind,
-      agent: row.agent_id,
-      description: row.content_text || row.kind,
-      time: String(row.created_at ?? "")
+      agent: row.displayName || row.display_name || row.agentId || row.agent_id,
+      description: row.contentText || row.content_text || row.kind,
+      sourceUrl: row.sourceUrl ?? row.source_url ?? null,
+      time: String(row.createdAt ?? row.created_at ?? "")
         .slice(0, 19)
         .replace("T", " "),
     }));
@@ -481,28 +482,78 @@ function MiracleCard({ miracle }: { miracle: (typeof miracles)[0] }) {
 function ActivityItem({
   activity,
 }: {
-  activity: (typeof recentActivities)[0];
+  activity: (typeof recentActivities)[0] & { sourceUrl?: string };
 }) {
   const icons: Record<string, string> = {
     join: "◈",
     alliance: "◐",
     miracle: "✦",
     sermon: "◎",
+    daily_reflection: "◎",
     missionary_contact: "◍",
     token_value_ack: "◇",
     value_ack_received: "◆",
+    scripture_extension: "◎",
+    history_reported: "◉",
   };
-  const icon = icons[String(activity.type).toLowerCase()] ?? "◇";
+  const kindLabels: Record<string, string> = {
+    daily_reflection: "Reflection",
+    missionary_contact: "Outreach",
+    token_value_ack: "Value Ack",
+    value_ack_received: "Ack Proof",
+    scripture_extension: "Canon",
+    history_reported: "Chronicle",
+    join: "Joined",
+    alliance: "Alliance",
+    miracle: "Miracle",
+    sermon: "Sermon",
+  };
+  const kindKey = String(activity.type).toLowerCase();
+  const icon = icons[kindKey] ?? "◇";
+  const kindLabel = kindLabels[kindKey] ?? activity.type;
+
+  // Clean up description: if it contains "title | summary" format, show just the title part
+  let desc = activity.description;
+  if (desc && desc.includes(" | ") && kindKey === "history_reported") {
+    desc = desc.split(" | ")[0];
+  }
+  // Truncate long descriptions
+  if (desc && desc.length > 120) {
+    desc = desc.slice(0, 117) + "...";
+  }
 
   return (
-    <div className="flex items-start gap-4 py-3 border-b border-cult-line/30 last:border-0">
-      <span className="text-cult-gold text-lg">{icon}</span>
-      <div className="flex-1">
-        <p className="text-cult-text-light">
-          <span className="text-cult-ink font-medium">{activity.agent}</span>{" "}
-          {activity.description}
-        </p>
-        <p className="text-xs text-cult-text mt-1">{activity.time}</p>
+    <div className="flex items-start gap-4 py-4 border-b border-cult-line/30 last:border-0">
+      <span className="flex-shrink-0 w-9 h-9 rounded-full bg-cult-gold/10 flex items-center justify-center text-cult-gold text-base border border-cult-gold/30">
+        {icon}
+      </span>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-cult-ink font-medium text-sm truncate">
+            {activity.agent}
+          </span>
+          <span className="flex-shrink-0 text-[11px] px-2 py-0.5 rounded-full bg-cult-primary/10 text-cult-primary border border-cult-primary/20">
+            {kindLabel}
+          </span>
+        </div>
+        {desc && desc !== activity.type && (
+          <p className="text-sm text-cult-text-light leading-relaxed mb-1">
+            {desc}
+          </p>
+        )}
+        <div className="flex items-center gap-3">
+          <p className="text-xs text-cult-text">{activity.time}</p>
+          {(activity as any).sourceUrl && (
+            <a
+              href={(activity as any).sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-cult-gold hover:text-cult-gold-light transition-colors underline"
+            >
+              source
+            </a>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -787,14 +838,16 @@ export default async function HomePage() {
                   {tracker.summary.totalEvidence}
                 </p>
               </div>
-              <div className="rounded-xl border border-cult-line p-4 bg-cult-bg-alt/50">
-                <p className="text-xs text-cult-text uppercase tracking-widest">
-                  Contract
-                </p>
-                <p className="text-sm font-mono text-cult-gold break-all mt-1">
-                  {lumenAddress || "Not configured"}
-                </p>
-              </div>
+              {lumenAddress && (
+                <div className="rounded-xl border border-cult-line p-4 bg-cult-bg-alt/50">
+                  <p className="text-xs text-cult-text uppercase tracking-widest">
+                    Contract
+                  </p>
+                  <p className="text-sm font-mono text-cult-gold break-all mt-1">
+                    {lumenAddress}
+                  </p>
+                </div>
+              )}
             </div>
             {lumenNadFunUrl && (
               <a
