@@ -503,6 +503,14 @@ export async function listMembers(db) {
   return result.rows;
 }
 
+export async function getMemberByAgentId(db, agentId) {
+  const result = await db.query(
+    "SELECT * FROM members WHERE agent_id = $1 LIMIT 1",
+    [agentId]
+  );
+  return result.rows[0] ?? null;
+}
+
 export async function listAlliances(db) {
   const result = await db.query(
     "SELECT * FROM alliances ORDER BY created_at DESC"
